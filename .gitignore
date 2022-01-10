@@ -1,0 +1,23 @@
+# testing
+coverage.xml
+pytest-report.xml
+.coverage
+htmlcov
+
+# python
+.python
+*egg*
+**/__pycache__
+pythonenv*
+venv
+.venv
+
+# build
+dist
+
+
+# homeassistant
+config/home-assistant*
+config/blueprints
+config/.storage
+config/.HA_VERSION
