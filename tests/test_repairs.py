@@ -50,7 +50,7 @@ async def test_finish_replaces_linked_requisition_and_unique_id(hass) -> None:
     result = await flow.async_step_finish()
 
     updated = entry.subentries["bank-1"]
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result.get("type") is FlowResultType.CREATE_ENTRY
     assert updated.data[CONF_REQUISITION_ID] == "new-requisition"
     assert updated.data[CONF_REFERENCE] == "new-reference"
     assert updated.unique_id == "new-requisition"
@@ -80,8 +80,8 @@ async def test_confirm_starts_external_authorization(hass) -> None:
 
     result = await flow.async_step_confirm({})
 
-    assert result["type"] is FlowResultType.EXTERNAL_STEP
-    assert result["url"] == "https://bank.example/authorize"
+    assert result.get("type") is FlowResultType.EXTERNAL_STEP
+    assert result.get("url") == "https://bank.example/authorize"
 
 
 async def test_authorize_rejects_wrong_callback_state() -> None:
@@ -91,8 +91,8 @@ async def test_authorize_rejects_wrong_callback_state() -> None:
 
     result = await flow.async_step_authorize({"state": "wrong"})
 
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "invalid_callback"
+    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("reason") == "invalid_callback"
 
 
 async def test_finish_rejects_incomplete_replacement(hass) -> None:
@@ -106,8 +106,8 @@ async def test_finish_rejects_incomplete_replacement(hass) -> None:
 
     result = await flow.async_step_finish()
 
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "authorization_incomplete"
+    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("reason") == "authorization_incomplete"
 
 
 async def test_unknown_issue_uses_confirmation_fallback(hass) -> None:
