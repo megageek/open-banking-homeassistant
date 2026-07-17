@@ -54,3 +54,26 @@ async def test_finish_creates_linked_bank_subentry() -> None:
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Alex — Example Bank"
     assert result["unique_id"] == "req-1"
+
+
+async def test_finish_reconfigure_updates_requisition_unique_id() -> None:
+    """Manual reconnection replaces both requisition data and subentry identity."""
+    flow = OpenBankingInstitutionSubentryFlow()
+    flow._reconfigure = True  # noqa: SLF001
+    flow._data = {  # noqa: SLF001
+        CONF_REQUISITION_ID: "new-requisition",
+        CONF_ACCOUNT_HOLDER: "Alex",
+        CONF_INSTITUTION_NAME: "Example Bank",
+    }
+    client = MagicMock()
+    client.async_get_requisition = AsyncMock(return_value={"status": "LN"})
+    flow._client = MagicMock(return_value=client)  # type: ignore[method-assign]  # noqa: SLF001
+    flow._get_reconfigure_subentry = MagicMock(return_value=MagicMock())  # type: ignore[method-assign]  # noqa: SLF001
+    flow._get_entry = MagicMock(return_value=MagicMock())  # type: ignore[method-assign]  # noqa: SLF001
+    flow.async_update_reload_and_abort = MagicMock(  # type: ignore[method-assign]
+        return_value={"type": FlowResultType.ABORT, "reason": "reconfigure_successful"}
+    )
+
+    await flow.async_step_finish()
+
+    assert flow.async_update_reload_and_abort.call_args.kwargs["unique_id"] == "new-requisition"

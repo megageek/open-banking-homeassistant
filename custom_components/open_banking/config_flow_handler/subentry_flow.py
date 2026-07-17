@@ -177,6 +177,7 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
                 subentry,
                 data=self._data,
                 title=title,
+                unique_id=str(self._data[CONF_REQUISITION_ID]),
             )
         return self.async_create_entry(
             title=title,

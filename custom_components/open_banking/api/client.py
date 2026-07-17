@@ -78,6 +78,10 @@ class OpenBankingApiClient:
         """Return a requisition."""
         return await self._request("GET", f"/requisitions/{requisition_id}/")
 
+    async def async_get_end_user_agreement(self, agreement_id: str) -> dict[str, Any]:
+        """Return an end user agreement."""
+        return await self._request("GET", f"/agreements/enduser/{agreement_id}/")
+
     async def async_delete_requisition(self, requisition_id: str) -> None:
         """Delete a requisition."""
         await self._request("DELETE", f"/requisitions/{requisition_id}/")

@@ -85,6 +85,20 @@ async def test_unauthorized_request_refreshes_token_once() -> None:
     assert session.request.call_count == 4
 
 
+async def test_get_end_user_agreement() -> None:
+    """Agreement metadata can be retrieved for expiry tracking."""
+    client, session = client_with_responses(
+        FakeResponse(200, {"access": "access", "refresh": "refresh"}),
+        FakeResponse(200, {"accepted": "2026-01-01T00:00:00Z", "access_valid_for_days": 90}),
+    )
+    await client.async_authenticate()
+
+    agreement = await client.async_get_end_user_agreement("agreement-1")
+
+    assert agreement["access_valid_for_days"] == 90
+    assert session.request.call_args.args[1].endswith("/agreements/enduser/agreement-1/")
+
+
 async def test_invalid_credentials_raise_authentication_error() -> None:
     """Credential rejection is distinguished from communication failures."""
     client, _ = client_with_responses(FakeResponse(401, {"detail": "bad credentials"}))

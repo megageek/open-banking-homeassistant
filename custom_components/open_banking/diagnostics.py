@@ -32,7 +32,15 @@ async def async_get_config_entry_diagnostics(
         {
             "entry": dict(entry.data),
             "subentries": {key: dict(value.data) for key, value in entry.subentries.items()},
-            "coordinators": {key: coordinator.data for key, coordinator in entry.runtime_data.coordinators.items()},
+            "coordinators": {
+                key: {
+                    **coordinator.data,
+                    "requisition_expires_at": (
+                        coordinator.requisition_expires_at.isoformat() if coordinator.requisition_expires_at else None
+                    ),
+                }
+                for key, coordinator in entry.runtime_data.coordinators.items()
+            },
         },
         TO_REDACT,
     )

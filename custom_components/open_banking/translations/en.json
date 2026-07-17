@@ -80,5 +80,31 @@
     "rate_limited": {"message": "The bank account API rate limit was reached."},
     "requisition_not_linked": {"message": "The bank connection is not linked (status: {status})."},
     "update_failed": {"message": "Unable to update bank account data."}
+  },
+  "issues": {
+    "requisition_expiring": {
+      "title": "Bank authorization for {institution} expires soon",
+      "fix_flow": {
+        "error": {"cannot_connect": "Unable to connect to GoCardless.", "external_url_missing": "Configure an external Home Assistant URL before reconnecting the bank."},
+        "abort": {"authorization_incomplete": "The replacement bank authorization was not completed.", "cannot_connect": "Unable to verify the replacement bank authorization.", "entry_missing": "The bank connection no longer exists.", "invalid_callback": "The authorization callback was invalid or expired."},
+        "step": {
+          "confirm": {"title": "Renew bank authorization", "description": "Create a replacement authorization for {institution}. The current connection remains active until the replacement is linked."},
+          "authorize": {"title": "Authorize your bank", "description": "Open the bank website and authorize access. This window advances automatically after authorization."},
+          "finish": {"title": "Finishing bank reconnection"}
+        }
+      }
+    },
+    "requisition_expired": {
+      "title": "Bank authorization for {institution} expired",
+      "fix_flow": {
+        "error": {"cannot_connect": "[%key:component::open_banking::issues::requisition_expiring::fix_flow::error::cannot_connect%]", "external_url_missing": "[%key:component::open_banking::issues::requisition_expiring::fix_flow::error::external_url_missing%]"},
+        "abort": {"authorization_incomplete": "[%key:component::open_banking::issues::requisition_expiring::fix_flow::abort::authorization_incomplete%]", "cannot_connect": "[%key:component::open_banking::issues::requisition_expiring::fix_flow::abort::cannot_connect%]", "entry_missing": "[%key:component::open_banking::issues::requisition_expiring::fix_flow::abort::entry_missing%]", "invalid_callback": "[%key:component::open_banking::issues::requisition_expiring::fix_flow::abort::invalid_callback%]"},
+        "step": {
+          "confirm": {"title": "[%key:component::open_banking::issues::requisition_expiring::fix_flow::step::confirm::title%]", "description": "The authorization for {institution} has expired. Create a replacement to resume balance updates."},
+          "authorize": {"title": "[%key:component::open_banking::issues::requisition_expiring::fix_flow::step::authorize::title%]", "description": "[%key:component::open_banking::issues::requisition_expiring::fix_flow::step::authorize::description%]"},
+          "finish": {"title": "[%key:component::open_banking::issues::requisition_expiring::fix_flow::step::finish::title%]"}
+        }
+      }
+    }
   }
 }

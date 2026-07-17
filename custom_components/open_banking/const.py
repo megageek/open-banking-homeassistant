@@ -28,6 +28,8 @@ SUBENTRY_TYPE_INSTITUTION = "institution"
 DATA_CALLBACK_STATES = "callback_states"
 CALLBACK_PATH = "/api/open_banking/callback"
 CALLBACK_TTL = timedelta(minutes=30)
+REQUISITION_EXPIRY_WARNING = timedelta(days=7)
+REQUISITION_EXPIRY_ISSUE_PREFIX = "requisition_expiry"
 
 DEFAULT_REFRESHES_PER_DAY = 4
 DEFAULT_REFRESH_WINDOW_START = "07:00:00"

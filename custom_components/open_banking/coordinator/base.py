@@ -22,12 +22,15 @@ from custom_components.open_banking.const import (
     DEFAULT_REFRESHES_PER_DAY,
     DOMAIN,
     LOGGER,
+    REQUISITION_EXPIRY_ISSUE_PREFIX,
+    REQUISITION_EXPIRY_WARNING,
     REQUISITION_LINKED,
 )
 from custom_components.open_banking.data import OpenBankingConfigEntry
 from homeassistant.config_entries import ConfigSubentry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -53,11 +56,14 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Initialize the coordinator."""
         self.subentry = subentry
         self.client = client
+        self._open_banking_config_entry = config_entry
         self._save_snapshot = save_snapshot or _async_noop_save
         self._cancel_scheduled_refresh: CALLBACK_TYPE | None = None
         self._quota_limit: int | None = None
         self._quota_blocked_until: datetime | None = None
         self._next_refresh_at: datetime | None = None
+        self._agreement_id: str | None = None
+        self._requisition_expires_at: datetime | None = None
         super().__init__(
             hass,
             LOGGER,
@@ -67,22 +73,34 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             always_update=False,
         )
 
+    @property
+    def requisition_expires_at(self) -> datetime | None:
+        """Return the known consent expiry timestamp."""
+        return self._requisition_expires_at
+
     def async_restore_snapshot(self, snapshot: dict[str, Any] | None) -> None:
         """Restore saved coordinator and scheduling state."""
+        if snapshot and snapshot.get("requisition_id") != self.subentry.data.get(CONF_REQUISITION_ID):
+            return
         if snapshot and isinstance(snapshot.get("data"), dict):
             self.async_set_updated_data(snapshot["data"])
             self._quota_limit = _optional_int(snapshot.get("quota_limit"))
             self._quota_blocked_until = _parse_datetime(snapshot.get("quota_blocked_until"))
             self._next_refresh_at = _parse_datetime(snapshot.get("next_refresh_at"))
+            agreement_id = snapshot.get("agreement_id")
+            self._agreement_id = agreement_id if isinstance(agreement_id, str) else None
+            self._requisition_expires_at = _parse_datetime(snapshot.get("requisition_expires_at"))
 
     async def async_config_entry_first_refresh(self) -> None:
         """Refresh on setup only when data is absent or its schedule was missed."""
+        if self.data is not None:
+            self._update_expiry_issue(str(self.data.get("requisition", {}).get("status", "")))
         if self.data is None:
             await super().async_config_entry_first_refresh()
             return
         if self._next_refresh_at is None or dt_util.utcnow() >= self._next_refresh_at:
             await self.async_refresh()
-            if self._cancel_scheduled_refresh is None:
+            if self._cancel_scheduled_refresh is None and not self._is_expired():
                 self._schedule_at(self._next_scheduled_time())
                 await self._save_snapshot(self._snapshot(self.data))
             return
@@ -101,6 +119,7 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             requisition = await self.client.async_get_requisition(str(self.subentry.data[CONF_REQUISITION_ID]))
             accounts: dict[str, dict[str, Any]] = {}
             if requisition.get("status") == REQUISITION_LINKED:
+                await self._async_update_requisition_expiry(requisition)
                 for account_id in requisition.get("accounts", []):
                     details_response = await self.client.async_get_account_details(account_id)
                     balances_response = await self.client.async_get_account_balances(account_id)
@@ -131,18 +150,81 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             data = {"requisition": requisition, "accounts": accounts}
             self._update_quota(accounts)
-            self._schedule_at(self._next_scheduled_time())
+            status = str(requisition.get("status", ""))
+            self._update_expiry_issue(status)
+            if status == "EX":
+                if self._cancel_scheduled_refresh is not None:
+                    self._cancel_scheduled_refresh()
+                    self._cancel_scheduled_refresh = None
+                self._next_refresh_at = None
+            else:
+                self._schedule_at(self._next_scheduled_time())
             await self._save_snapshot(self._snapshot(data))
             return data
+
+    async def _async_update_requisition_expiry(self, requisition: dict[str, Any]) -> None:
+        """Fetch the linked agreement and calculate the consent expiry."""
+        agreement = requisition.get("agreement") or requisition.get("agreements")
+        if not isinstance(agreement, str) or not agreement:
+            return
+        if agreement == self._agreement_id and self._requisition_expires_at is not None:
+            return
+        try:
+            agreement_data = await self.client.async_get_end_user_agreement(agreement)
+        except OpenBankingApiError:
+            LOGGER.debug("Unable to retrieve agreement expiry for %s", self.subentry.subentry_id)
+            return
+        accepted = dt_util.parse_datetime(str(agreement_data.get("accepted", "")))
+        try:
+            valid_days = int(agreement_data["access_valid_for_days"])
+        except KeyError, TypeError, ValueError:
+            return
+        if accepted is None:
+            return
+        self._agreement_id = agreement
+        self._requisition_expires_at = accepted + timedelta(days=valid_days)
+
+    def _update_expiry_issue(self, status: str) -> None:
+        """Create, update, or clear the requisition expiry repair issue."""
+        issue_id = f"{REQUISITION_EXPIRY_ISSUE_PREFIX}_{self.subentry.subentry_id}"
+        expired = status == "EX"
+        warning = (
+            self._requisition_expires_at is not None
+            and self._requisition_expires_at - dt_util.utcnow() <= REQUISITION_EXPIRY_WARNING
+        )
+        if not expired and not warning:
+            ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+            return
+        expiry = self._requisition_expires_at
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            issue_id,
+            data={
+                "entry_id": self._open_banking_config_entry.entry_id,
+                "subentry_id": self.subentry.subentry_id,
+            },
+            is_fixable=True,
+            severity=ir.IssueSeverity.ERROR if expired else ir.IssueSeverity.WARNING,
+            translation_key="requisition_expired" if expired else "requisition_expiring",
+            translation_placeholders={
+                "institution": str(self.subentry.title),
+                "expires": expiry.date().isoformat() if expiry else "unknown",
+            },
+        )
 
     async def _async_scheduled_refresh(self, _: datetime) -> None:
         """Run one scheduled refresh and arrange the next one."""
         self._cancel_scheduled_refresh = None
         await self.async_refresh()
-        if self._cancel_scheduled_refresh is None:
+        if self._cancel_scheduled_refresh is None and not self._is_expired():
             self._schedule_at(self._next_scheduled_time())
             if self.data is not None:
                 await self._save_snapshot(self._snapshot(self.data))
+
+    def _is_expired(self) -> bool:
+        """Return whether the current requisition is expired."""
+        return self.data is not None and self.data.get("requisition", {}).get("status") == "EX"
 
     def _schedule_at(self, when: datetime) -> None:
         """Schedule the coordinator at a UTC timestamp."""
@@ -198,9 +280,14 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Return JSON-serializable coordinator state."""
         return {
             "data": data,
+            "requisition_id": self.subentry.data.get(CONF_REQUISITION_ID),
             "next_refresh_at": self._next_refresh_at.isoformat() if self._next_refresh_at else None,
             "quota_limit": self._quota_limit,
             "quota_blocked_until": self._quota_blocked_until.isoformat() if self._quota_blocked_until else None,
+            "agreement_id": self._agreement_id,
+            "requisition_expires_at": (
+                self._requisition_expires_at.isoformat() if self._requisition_expires_at else None
+            ),
         }
 
 

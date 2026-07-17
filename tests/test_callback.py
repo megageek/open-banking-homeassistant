@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiohttp import web
 import pytest
@@ -29,6 +29,23 @@ async def test_callback_advances_subentry_flow_and_consumes_state(hass) -> None:
     assert response.status == 200
     assert "token" not in hass.data[DOMAIN][DATA_CALLBACK_STATES]
     hass.config_entries.subentries.async_configure.assert_awaited_once_with("flow-1", {"state": "token"})
+
+
+async def test_callback_advances_repair_flow(hass) -> None:
+    """A repair callback advances the repairs flow manager."""
+    state = CallbackState("repair-1", dt_util.now() + timedelta(minutes=1), False, True)
+    hass.data[DOMAIN] = {DATA_CALLBACK_STATES: {"token": state}}
+    manager = MagicMock()
+    manager.async_configure = AsyncMock(return_value={"type": FlowResultType.EXTERNAL_STEP_DONE})
+    request = MagicMock()
+    request.app = {KEY_HASS: hass}
+    request.query = {"state": "token"}
+
+    with patch("custom_components.open_banking.callback.repairs_flow_manager", return_value=manager):
+        response = await OpenBankingCallbackView().get(request)
+
+    assert response.status == 200
+    manager.async_configure.assert_awaited_once_with("repair-1", {"state": "token"})
 
 
 @pytest.mark.parametrize("token", [None, "unknown", "expired"])

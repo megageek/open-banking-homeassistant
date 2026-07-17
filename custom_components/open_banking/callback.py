@@ -7,6 +7,7 @@ from datetime import datetime
 
 from aiohttp import web
 
+from homeassistant.components.repairs import repairs_flow_manager
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.event import async_call_later
@@ -23,6 +24,7 @@ class CallbackState:
     flow_id: str
     expires_at: datetime
     is_subentry: bool
+    is_repair: bool = False
 
 
 class OpenBankingCallbackView(HomeAssistantView):
@@ -41,7 +43,15 @@ class OpenBankingCallbackView(HomeAssistantView):
         if callback_state is None or callback_state.expires_at <= dt_util.now():
             raise web.HTTPBadRequest(text="Invalid or expired Open Banking authorization state")
 
-        if callback_state.is_subentry:
+        if callback_state.is_repair:
+            flow_manager = repairs_flow_manager(hass)
+            if flow_manager is None:
+                raise web.HTTPBadRequest(text="The Home Assistant repair flow is unavailable")
+            result = await flow_manager.async_configure(
+                callback_state.flow_id,
+                {"state": state_token},
+            )
+        elif callback_state.is_subentry:
             result = await hass.config_entries.subentries.async_configure(
                 callback_state.flow_id,
                 {"state": state_token},
