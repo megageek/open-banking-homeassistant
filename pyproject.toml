@@ -46,6 +46,7 @@ markers = [
     "unit: Unit tests (fast, no external dependencies)",
     "integration: Integration tests (may use coordinator/time service)",
     "live_api: Live tests against the GoCardless API (requires real credentials)",
+    "live_e2e: Browser-driven live tests against GoCardless Sandbox Finance",
 ]
 filterwarnings = [
     # Treat warnings as errors to catch issues early

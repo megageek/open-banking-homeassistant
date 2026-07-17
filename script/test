@@ -13,6 +13,7 @@
 #   --cov           Generate coverage report (terminal output)
 #   --cov-html      Generate HTML coverage report in htmlcov/
 #   --live          Run only live API tests (requires OPEN_BANKING_SECRET_ID and OPEN_BANKING_SECRET_KEY)
+#   --live-e2e      Run the browser-driven Sandbox Finance end-to-end test
 #
 # Examples:
 #   ./script/test
@@ -20,6 +21,7 @@
 #   ./script/test --cov
 #   ./script/test --cov-html
 #   ./script/test --live
+#   ./script/test --live-e2e
 #   ./script/test --cov -k test_midnight
 #   ./script/test tests/test_cache_validity.py
 
@@ -40,6 +42,7 @@ PYTHON="$VIRTUAL_ENV/bin/python"
 COVERAGE_ARGS=()
 PYTEST_ARGS=()
 LIVE_TESTS=false
+LIVE_E2E_TESTS=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -55,6 +58,10 @@ while [[ $# -gt 0 ]]; do
         LIVE_TESTS=true
         shift
         ;;
+    --live-e2e)
+        LIVE_E2E_TESTS=true
+        shift
+        ;;
     *)
         PYTEST_ARGS+=("$1")
         shift
@@ -62,19 +69,34 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ "$LIVE_TESTS" == "true" ]]; then
+if [[ "$LIVE_TESTS" == "true" && "$LIVE_E2E_TESTS" == "true" ]]; then
+    log_error "--live and --live-e2e cannot be used together"
+    exit 2
+fi
+
+if [[ "$LIVE_TESTS" == "true" || "$LIVE_E2E_TESTS" == "true" ]]; then
     # Non-interactive shells do not load the project-managed Bash/Zsh startup files.
     # shellcheck source=.devcontainer/_load_env.sh
     source "$PWD/.devcontainer/_load_env.sh"
+fi
+
+if [[ "$LIVE_TESTS" == "true" ]]; then
     PYTEST_ARGS+=("-m" "live_api")
+elif [[ "$LIVE_E2E_TESTS" == "true" ]]; then
+    PYTEST_ARGS+=("-m" "live_e2e")
 else
-    PYTEST_ARGS+=("-m" "not live_api")
+    PYTEST_ARGS+=("-m" "not live_api and not live_e2e")
 fi
 
 # Check if pytest and the Home Assistant test plugin are available
-if ! "$PYTHON" -c "import pytest, pytest_homeassistant_custom_component" 2>/dev/null; then
+if ! "$PYTHON" -c "import playwright, pytest, pytest_homeassistant_custom_component" 2>/dev/null; then
     log_info "Test dependencies not found. Installing..."
     uv pip install --requirement requirements_test.txt
+fi
+
+if [[ "$LIVE_E2E_TESTS" == "true" ]]; then
+    log_info "Ensuring the Playwright Chromium browser is installed..."
+    "$PYTHON" -m playwright install chromium
 fi
 
 # Run pytest with project configuration
