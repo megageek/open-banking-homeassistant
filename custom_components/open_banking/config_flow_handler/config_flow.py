@@ -7,17 +7,12 @@ import secrets
 from typing import Any
 from uuid import uuid4
 
-from homeassistant import config_entries
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
-from homeassistant.util import dt as dt_util
 import voluptuous as vol
 from yarl import URL
 
-from ..api import OpenBankingApiClient, OpenBankingApiError, OpenBankingAuthenticationError
-from ..callback import CallbackState, async_store_callback_state
-from ..const import (
+from custom_components.open_banking.api import OpenBankingApiClient, OpenBankingApiError, OpenBankingAuthenticationError
+from custom_components.open_banking.callback import CallbackState, async_store_callback_state
+from custom_components.open_banking.const import (
     CALLBACK_PATH,
     CALLBACK_TTL,
     CONF_ACCOUNT_HOLDER,
@@ -33,6 +28,12 @@ from ..const import (
     REQUISITION_LINKED,
     SUBENTRY_TYPE_INSTITUTION,
 )
+from homeassistant import config_entries
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.network import NoURLAvailableError, get_url
+from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
+from homeassistant.util import dt as dt_util
+
 from .subentry_flow import OpenBankingInstitutionSubentryFlow, connection_schema
 
 
@@ -112,9 +113,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if not self._institutions:
             try:
-                institutions = await self._initial_client().async_get_institutions(
-                    self._data[CONF_COUNTRY]
-                )
+                institutions = await self._initial_client().async_get_institutions(self._data[CONF_COUNTRY])
             except OpenBankingApiError:
                 return self.async_show_form(
                     step_id="connection",
@@ -122,8 +121,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors={"base": "cannot_connect"},
                 )
             self._institutions = {
-                str(institution["id"]): str(institution.get("name", institution["id"]))
-                for institution in institutions
+                str(institution["id"]): str(institution.get("name", institution["id"])) for institution in institutions
             }
 
         if user_input is not None:
@@ -163,9 +161,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         """Verify and atomically create the account and first subentry."""
         try:
-            requisition = await self._initial_client().async_get_requisition(
-                self._data[CONF_REQUISITION_ID]
-            )
+            requisition = await self._initial_client().async_get_requisition(self._data[CONF_REQUISITION_ID])
         except OpenBankingApiError:
             return self.async_abort(reason="cannot_connect")
         if requisition.get("status") != REQUISITION_LINKED:
@@ -176,9 +172,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_SECRET_KEY: self._data[CONF_SECRET_KEY],
         }
         subentry_data = {
-            key: value
-            for key, value in self._data.items()
-            if key not in {CONF_SECRET_ID, CONF_SECRET_KEY}
+            key: value for key, value in self._data.items() if key not in {CONF_SECRET_ID, CONF_SECRET_KEY}
         }
         return self.async_create_entry(
             title="GoCardless Bank Account Data",
@@ -260,11 +254,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Create the initial requisition and parent-flow callback state."""
         external_url = get_url(self.hass, prefer_external=True, allow_internal=False)
         state_token = secrets.token_urlsafe(32)
-        callback_url = str(
-            URL(external_url)
-            .with_path(CALLBACK_PATH)
-            .with_query({"state": state_token})
-        )
+        callback_url = str(URL(external_url).with_path(CALLBACK_PATH).with_query({"state": state_token}))
         reference = uuid4().hex
         states: dict[str, CallbackState] = self.hass.data[DOMAIN][DATA_CALLBACK_STATES]
         async_store_callback_state(
@@ -282,7 +272,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 callback_url,
                 reference,
             )
-        except (KeyError, OpenBankingApiError):
+        except KeyError, OpenBankingApiError:
             states.pop(state_token, None)
             raise
         self._state_token = state_token

@@ -5,12 +5,11 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from custom_components.open_banking.const import DOMAIN, REQUISITION_LINKED
+from custom_components.open_banking.coordinator import OpenBankingDataUpdateCoordinator
+from custom_components.open_banking.entity import OpenBankingEntity
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
-from homeassistant.helpers.entity import DeviceInfo
-
-from ..const import DOMAIN, REQUISITION_LINKED
-from ..coordinator import OpenBankingDataUpdateCoordinator
-from ..entity import OpenBankingEntity
+from homeassistant.helpers.device_registry import DeviceInfo
 
 
 class OpenBankingBalanceSensor(OpenBankingEntity, SensorEntity):
@@ -46,9 +45,7 @@ class OpenBankingBalanceSensor(OpenBankingEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return whether the connection remains linked and data is current."""
-        return super().available and (
-            self.coordinator.data.get("requisition", {}).get("status") == REQUISITION_LINKED
-        )
+        return super().available and (self.coordinator.data.get("requisition", {}).get("status") == REQUISITION_LINKED)
 
     @property
     def native_value(self) -> Decimal | None:
@@ -58,7 +55,7 @@ class OpenBankingBalanceSensor(OpenBankingEntity, SensorEntity):
             return None
         try:
             return Decimal(str(balance["balanceAmount"]["amount"]))
-        except (InvalidOperation, KeyError, TypeError):
+        except InvalidOperation, KeyError, TypeError:
             return None
 
     @property
@@ -74,10 +71,6 @@ class OpenBankingBalanceSensor(OpenBankingEntity, SensorEntity):
         """Return this entity's balance payload."""
         account = self.coordinator.data.get("accounts", {}).get(self._account_id, {})
         return next(
-            (
-                balance
-                for balance in account.get("balances", [])
-                if balance.get("balanceType") == self._balance_type
-            ),
+            (balance for balance in account.get("balances", []) if balance.get("balanceType") == self._balance_type),
             None,
         )

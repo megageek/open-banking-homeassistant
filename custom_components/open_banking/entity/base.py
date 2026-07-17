@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
+from custom_components.open_banking.coordinator import OpenBankingDataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-
-from ..coordinator import OpenBankingDataUpdateCoordinator
 
 
 class OpenBankingEntity(CoordinatorEntity[OpenBankingDataUpdateCoordinator]):

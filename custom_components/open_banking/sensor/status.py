@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from custom_components.open_banking.const import (
+    CONF_INSTITUTION_ID,
+    CONF_INSTITUTION_NAME,
+    DOMAIN,
+    REQUISITION_STATUSES,
+)
+from custom_components.open_banking.coordinator import OpenBankingDataUpdateCoordinator
+from custom_components.open_banking.entity import OpenBankingEntity
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.helpers.device_registry import DeviceEntryType
-from homeassistant.helpers.entity import DeviceInfo, EntityCategory
-
-from ..const import CONF_INSTITUTION_ID, CONF_INSTITUTION_NAME, DOMAIN, REQUISITION_STATUSES
-from ..coordinator import OpenBankingDataUpdateCoordinator
-from ..entity import OpenBankingEntity
+from homeassistant.const import EntityCategory
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 
 
 class OpenBankingStatusSensor(OpenBankingEntity, SensorEntity):

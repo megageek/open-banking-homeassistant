@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-from homeassistant import config_entries, data_entry_flow
-
 from custom_components.open_banking.api import OpenBankingAuthenticationError
 from custom_components.open_banking.const import CONF_SECRET_ID, CONF_SECRET_KEY, DOMAIN
+from homeassistant import config_entries, data_entry_flow
 
 
-async def test_invalid_credentials(hass) -> None:
+async def test_invalid_credentials(hass, enable_custom_integrations) -> None:
     """Rejected user secrets keep the flow open with an auth error."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     with patch(
@@ -26,7 +25,7 @@ async def test_invalid_credentials(hass) -> None:
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_valid_credentials_continue_to_first_bank(hass) -> None:
+async def test_valid_credentials_continue_to_first_bank(hass, enable_custom_integrations) -> None:
     """Valid user secrets continue directly to first-bank configuration."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     with patch(

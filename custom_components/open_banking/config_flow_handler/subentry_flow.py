@@ -6,17 +6,12 @@ import secrets
 from typing import Any
 from uuid import uuid4
 
-from homeassistant import config_entries
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.util import dt as dt_util
 import voluptuous as vol
 from yarl import URL
 
-from ..api import OpenBankingApiClient, OpenBankingApiError
-from ..callback import CallbackState, async_store_callback_state
-from ..const import (
+from custom_components.open_banking.api import OpenBankingApiClient, OpenBankingApiError
+from custom_components.open_banking.callback import CallbackState, async_store_callback_state
+from custom_components.open_banking.const import (
     CALLBACK_PATH,
     CALLBACK_TTL,
     CONF_ACCOUNT_HOLDER,
@@ -38,10 +33,44 @@ from ..const import (
     MIN_REFRESH_INTERVAL,
     REQUISITION_LINKED,
 )
+from homeassistant import config_entries
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.network import NoURLAvailableError, get_url
+from homeassistant.util import dt as dt_util
 
 COUNTRIES = [
-    "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GB", "GR", "HR", "HU",
-    "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MT", "NL", "NO", "PL", "PT", "RO", "SE", "SI", "SK",
+    "AT",
+    "BE",
+    "BG",
+    "CY",
+    "CZ",
+    "DE",
+    "DK",
+    "EE",
+    "ES",
+    "FI",
+    "FR",
+    "GB",
+    "GR",
+    "HR",
+    "HU",
+    "IE",
+    "IS",
+    "IT",
+    "LI",
+    "LT",
+    "LU",
+    "LV",
+    "MT",
+    "NL",
+    "NO",
+    "PL",
+    "PT",
+    "RO",
+    "SE",
+    "SI",
+    "SK",
 ]
 
 
@@ -83,8 +112,7 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
                     errors={"base": "cannot_connect"},
                 )
             self._institutions = {
-                str(institution["id"]): str(institution.get("name", institution["id"]))
-                for institution in institutions
+                str(institution["id"]): str(institution.get("name", institution["id"])) for institution in institutions
             }
 
         if user_input is not None:
@@ -102,9 +130,7 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
 
         return self.async_show_form(
             step_id="institution",
-            data_schema=vol.Schema(
-                {vol.Required(CONF_INSTITUTION_ID): vol.In(self._institutions)}
-            ),
+            data_schema=vol.Schema({vol.Required(CONF_INSTITUTION_ID): vol.In(self._institutions)}),
             errors=errors,
         )
 
@@ -126,9 +152,7 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
     ) -> config_entries.SubentryFlowResult:
         """Verify linkage and save the subentry."""
         try:
-            requisition = await self._client().async_get_requisition(
-                self._data[CONF_REQUISITION_ID]
-            )
+            requisition = await self._client().async_get_requisition(self._data[CONF_REQUISITION_ID])
         except OpenBankingApiError:
             return self.async_abort(reason="cannot_connect")
         if requisition.get("status") != REQUISITION_LINKED:
@@ -178,9 +202,7 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
         """Create a requisition and callback state."""
         external_url = get_url(self.hass, prefer_external=True, allow_internal=False)
         state_token = secrets.token_urlsafe(32)
-        callback_url = str(
-            URL(external_url).with_path(CALLBACK_PATH).with_query({"state": state_token})
-        )
+        callback_url = str(URL(external_url).with_path(CALLBACK_PATH).with_query({"state": state_token}))
         reference = uuid4().hex
         states: dict[str, CallbackState] = self.hass.data[DOMAIN][DATA_CALLBACK_STATES]
         async_store_callback_state(
@@ -198,7 +220,7 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
                 callback_url,
                 reference,
             )
-        except (KeyError, OpenBankingApiError):
+        except KeyError, OpenBankingApiError:
             states.pop(state_token, None)
             raise
         self._state_token = state_token
@@ -214,6 +236,7 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
             str(entry.data[CONF_SECRET_KEY]),
             async_get_clientsession(self.hass),
         )
+
 
 def connection_schema(
     values: dict[str, Any],

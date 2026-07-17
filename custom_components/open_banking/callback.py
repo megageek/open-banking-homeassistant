@@ -6,10 +6,11 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from aiohttp import web
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
+
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.http import KEY_HASS, HomeAssistantView
 from homeassistant.util import dt as dt_util
 
 from .const import CALLBACK_PATH, CALLBACK_TTL, DATA_CALLBACK_STATES, DOMAIN

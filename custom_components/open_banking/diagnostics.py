@@ -7,13 +7,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.redact import async_redact_data
 
-from .const import (
-    CONF_ACCOUNT_HOLDER,
-    CONF_REFERENCE,
-    CONF_REQUISITION_ID,
-    CONF_SECRET_ID,
-    CONF_SECRET_KEY,
-)
+from .const import CONF_ACCOUNT_HOLDER, CONF_REFERENCE, CONF_REQUISITION_ID, CONF_SECRET_ID, CONF_SECRET_KEY
 from .data import OpenBankingConfigEntry
 
 TO_REDACT = {
@@ -38,9 +32,7 @@ async def async_get_config_entry_diagnostics(
         {
             "entry": dict(entry.data),
             "subentries": {key: dict(value.data) for key, value in entry.subentries.items()},
-            "coordinators": {
-                key: coordinator.data for key, coordinator in entry.runtime_data.coordinators.items()
-            },
+            "coordinators": {key: coordinator.data for key, coordinator in entry.runtime_data.coordinators.items()},
         },
         TO_REDACT,
     )

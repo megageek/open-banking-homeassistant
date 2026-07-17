@@ -5,18 +5,13 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-from homeassistant.config_entries import ConfigSubentry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-
-from ..api import (
-    OpenBankingApiError,
+from custom_components.open_banking.api import (
     OpenBankingApiClient,
+    OpenBankingApiError,
     OpenBankingAuthenticationError,
     OpenBankingRateLimitError,
 )
-from ..const import (
+from custom_components.open_banking.const import (
     CONF_REFRESH_INTERVAL,
     CONF_REQUISITION_ID,
     DEFAULT_REFRESH_INTERVAL,
@@ -24,7 +19,11 @@ from ..const import (
     LOGGER,
     REQUISITION_LINKED,
 )
-from ..data import OpenBankingConfigEntry
+from custom_components.open_banking.data import OpenBankingConfigEntry
+from homeassistant.config_entries import ConfigSubentry
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 
 class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -53,21 +52,16 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch all data for this bank connection."""
         try:
-            requisition = await self.client.async_get_requisition(
-                str(self.subentry.data[CONF_REQUISITION_ID])
-            )
-            if requisition.get("status") != REQUISITION_LINKED:
-                return {"requisition": requisition, "accounts": {}}
-
+            requisition = await self.client.async_get_requisition(str(self.subentry.data[CONF_REQUISITION_ID]))
             accounts: dict[str, dict[str, Any]] = {}
-            for account_id in requisition.get("accounts", []):
-                details_response = await self.client.async_get_account_details(account_id)
-                balances_response = await self.client.async_get_account_balances(account_id)
-                accounts[account_id] = {
-                    "details": details_response.get("account", {}),
-                    "balances": balances_response.get("balances", []),
-                }
-            return {"requisition": requisition, "accounts": accounts}
+            if requisition.get("status") == REQUISITION_LINKED:
+                for account_id in requisition.get("accounts", []):
+                    details_response = await self.client.async_get_account_details(account_id)
+                    balances_response = await self.client.async_get_account_balances(account_id)
+                    accounts[account_id] = {
+                        "details": details_response.get("account", {}),
+                        "balances": balances_response.get("balances", []),
+                    }
         except OpenBankingAuthenticationError as err:
             raise ConfigEntryAuthFailed(
                 translation_domain=DOMAIN,
@@ -86,3 +80,5 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 translation_domain=DOMAIN,
                 translation_key="update_failed",
             ) from err
+        else:
+            return {"requisition": requisition, "accounts": accounts}

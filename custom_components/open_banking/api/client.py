@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, NoReturn
 
 from aiohttp import ClientError, ClientResponse, ClientSession
 
@@ -139,23 +139,23 @@ class OpenBankingApiClient:
                             retry_auth=False,
                             **kwargs,
                         )
-                    raise OpenBankingAuthenticationError(await self._error_message(response))
+                    self._raise_authentication_error(await self._error_message(response))
                 if response.status == 429:
                     retry_header = response.headers.get("Retry-After")
                     retry_after = int(retry_header) if retry_header and retry_header.isdigit() else None
-                    raise OpenBankingRateLimitError(await self._error_message(response), retry_after)
+                    self._raise_rate_limit_error(await self._error_message(response), retry_after)
                 if response.status >= 400:
                     message = await self._error_message(response)
                     if response.status in {401, 403}:
-                        raise OpenBankingAuthenticationError(message)
-                    raise OpenBankingCommunicationError(message)
+                        self._raise_authentication_error(message)
+                    self._raise_communication_error(message)
                 if response.status == 204:
                     return {}
                 try:
                     payload = await response.json()
                 except (ClientError, ValueError) as err:
                     raise OpenBankingInvalidResponseError("API response was not valid JSON") from err
-        except (OpenBankingAuthenticationError, OpenBankingCommunicationError, OpenBankingRateLimitError):
+        except OpenBankingAuthenticationError, OpenBankingCommunicationError, OpenBankingRateLimitError:
             raise
         except (ClientError, TimeoutError) as err:
             raise OpenBankingCommunicationError(f"Unable to communicate with GoCardless: {err}") from err
@@ -165,11 +165,26 @@ class OpenBankingApiClient:
         return payload
 
     @staticmethod
+    def _raise_authentication_error(message: str) -> NoReturn:
+        """Raise an authentication error from a response message."""
+        raise OpenBankingAuthenticationError(message)
+
+    @staticmethod
+    def _raise_rate_limit_error(message: str, retry_after: int | None) -> NoReturn:
+        """Raise a rate-limit error from a response message."""
+        raise OpenBankingRateLimitError(message, retry_after)
+
+    @staticmethod
+    def _raise_communication_error(message: str) -> NoReturn:
+        """Raise a communication error from a response message."""
+        raise OpenBankingCommunicationError(message)
+
+    @staticmethod
     async def _error_message(response: ClientResponse) -> str:
         """Extract a safe API error message."""
         try:
             payload = await response.json()
-        except (ClientError, ValueError):
+        except ClientError, ValueError:
             return f"GoCardless returned HTTP {response.status}"
         if isinstance(payload, dict):
             return str(payload.get("detail") or payload.get("summary") or f"HTTP {response.status}")
