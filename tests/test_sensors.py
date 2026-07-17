@@ -57,5 +57,5 @@ def test_status_sensor_exposes_requisition_status() -> None:
 
     sensor = OpenBankingStatusSensor(coordinator)
 
-    assert sensor.native_value == "LN"
+    assert sensor.native_value == "ln"
     assert sensor.unique_id == "bank-1-status"

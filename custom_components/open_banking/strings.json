@@ -1,5 +1,4 @@
 {
-  "title": "Open Banking (GoCardless)",
   "config": {
     "abort": {
       "already_configured": "This GoCardless account is already configured.",
@@ -68,7 +67,11 @@
   },
   "config_subentries": {
     "institution": {
-      "title": "Bank connection",
+      "entry_type": "Bank connection",
+      "initiate_flow": {
+        "user": "Add bank connection",
+        "reconfigure": "Reconfigure bank connection"
+      },
       "abort": {
         "authorization_incomplete": "The bank connection was not authorized.",
         "cannot_connect": "Unable to verify the bank connection.",
@@ -128,15 +131,15 @@
       "connection_status": {
         "name": "Connection status",
         "state": {
-          "CR": "Created",
-          "EX": "Expired",
-          "GA": "Granting access",
-          "GC": "Giving consent",
-          "LN": "Linked",
-          "RJ": "Rejected",
-          "SA": "Selecting accounts",
-          "SU": "Suspended",
-          "UA": "Authenticating"
+          "cr": "Created",
+          "ex": "Expired",
+          "ga": "Granting access",
+          "gc": "Giving consent",
+          "ln": "Linked",
+          "rj": "Rejected",
+          "sa": "Selecting accounts",
+          "su": "Suspended",
+          "ua": "Authenticating"
         }
       }
     }

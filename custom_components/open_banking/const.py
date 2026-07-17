@@ -37,7 +37,7 @@ MAX_REFRESHES_PER_DAY = 24
 
 REQUISITION_LINKED = "LN"
 REQUISITION_FAILED = {"EX", "RJ", "SU"}
-REQUISITION_STATUSES = ["CR", "GC", "UA", "RJ", "SA", "GA", "LN", "EX", "SU"]
+REQUISITION_STATUSES = ["cr", "gc", "ua", "rj", "sa", "ga", "ln", "ex", "su"]
 
 DEFAULT_BALANCE_TYPES = [
     "closingBooked",

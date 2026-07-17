@@ -42,4 +42,4 @@ class OpenBankingStatusSensor(OpenBankingEntity, SensorEntity):
     def native_value(self) -> str | None:
         """Return the requisition status code."""
         status = self.coordinator.data.get("requisition", {}).get("status")
-        return str(status) if status else None
+        return str(status).lower() if status else None
