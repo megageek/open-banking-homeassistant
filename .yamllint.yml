@@ -1,5 +1,5 @@
 ---
-# yamllint configuration for nordigen
+# yamllint configuration for open_banking
 # Documentation: https://yamllint.readthedocs.io/en/stable/rules.html
 
 extends: default

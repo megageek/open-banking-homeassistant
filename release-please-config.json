@@ -9,7 +9,7 @@
       "extra-files": [
         {
           "type": "json",
-          "path": "custom_components/nordigen/manifest.json",
+          "path": "custom_components/open_banking/manifest.json",
           "jsonpath": "$.version"
         }
       ],

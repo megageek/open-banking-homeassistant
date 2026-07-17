@@ -1,0 +1,82 @@
+{
+  "title": "Open Banking (GoCardless)",
+  "config": {
+    "abort": {
+      "already_configured": "This GoCardless account is already configured.",
+      "authorization_incomplete": "The bank connection was not authorized.",
+      "cannot_connect": "Unable to verify the bank connection.",
+      "invalid_callback": "The authorization callback was invalid or expired.",
+      "reconfigure_successful": "Credentials were updated successfully.",
+      "reauth_successful": "Credentials were updated successfully."
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to GoCardless.",
+      "external_url_missing": "Configure an external Home Assistant URL before connecting a bank.",
+      "invalid_auth": "The secret ID or secret key is invalid.",
+      "unknown": "Unexpected error"
+    },
+    "step": {
+      "user": {
+        "title": "Connect GoCardless Bank Account Data",
+        "description": "Enter the user secrets from your GoCardless Bank Account Data account.",
+        "data": {"secret_id": "Secret ID", "secret_key": "Secret key"}
+      },
+      "connection": {
+        "title": "Bank connection settings",
+        "data": {"account_holder": "Account holder label", "balance_types": "Balance types", "country": "Country", "refresh_interval": "Refresh interval (minutes)"}
+      },
+      "institution": {"title": "Select your bank", "data": {"institution_id": "Institution"}},
+      "authorize": {"title": "Authorize your bank", "description": "Open the bank website and authorize access. This window will advance automatically when authorization returns to Home Assistant."},
+      "finish": {"title": "Finishing bank connection"},
+      "reauth_confirm": {
+        "title": "Reconnect GoCardless",
+        "description": "Update the GoCardless user secrets.",
+        "data": {"secret_id": "Secret ID", "secret_key": "Secret key"}
+      },
+      "reconfigure": {
+        "title": "Update GoCardless credentials",
+        "data": {"secret_id": "Secret ID", "secret_key": "Secret key"}
+      }
+    }
+  },
+  "config_subentries": {
+    "institution": {
+      "title": "Bank connection",
+      "abort": {
+        "authorization_incomplete": "The bank connection was not authorized.",
+        "cannot_connect": "Unable to verify the bank connection.",
+        "invalid_callback": "The authorization callback was invalid or expired.",
+        "reconfigure_successful": "The bank connection was updated successfully."
+      },
+      "error": {
+        "cannot_connect": "Unable to connect to GoCardless.",
+        "external_url_missing": "Configure an external Home Assistant URL before connecting a bank."
+      },
+      "step": {
+        "user": {
+          "title": "Bank connection settings",
+          "data": {"account_holder": "Account holder label", "balance_types": "Balance types", "country": "Country", "refresh_interval": "Refresh interval (minutes)"}
+        },
+        "institution": {"title": "Select your bank", "data": {"institution_id": "Institution"}},
+        "authorize": {"title": "Authorize your bank", "description": "Open the bank website and authorize access. This window will advance automatically when authorization returns to Home Assistant."},
+        "finish": {"title": "Finishing bank connection"},
+        "reconfigure": {
+          "title": "Update bank connection",
+          "data": {"account_holder": "Account holder label", "balance_types": "Balance types", "country": "Country", "reconnect": "Reconnect bank authorization", "refresh_interval": "Refresh interval (minutes)"}
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "balance": {"name": "{balance_type} balance"},
+      "connection_status": {"name": "Connection status", "state": {"CR": "Created", "EX": "Expired", "GA": "Granting access", "GC": "Giving consent", "LN": "Linked", "RJ": "Rejected", "SA": "Selecting accounts", "SU": "Suspended", "UA": "Authenticating"}}
+    }
+  },
+  "exceptions": {
+    "authentication_failed": {"message": "GoCardless rejected the configured credentials."},
+    "rate_limited": {"message": "The bank account API rate limit was reached."},
+    "requisition_not_linked": {"message": "The bank connection is not linked (status: {status})."},
+    "update_failed": {"message": "Unable to update bank account data."}
+  }
+}

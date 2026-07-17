@@ -1,6 +1,10 @@
 {
-  "name": "Nordigen for Home Assistant",
+  "name": "Open Banking (GoCardless)",
   "homeassistant": "2026.4.0",
   "hacs": "2.0.5",
-  "render_readme": true
+  "render_readme": true,
+  "country": [
+    "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GB", "GR", "HR", "HU",
+    "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MT", "NL", "NO", "PL", "PT", "RO", "SE", "SI", "SK"
+  ]
 }

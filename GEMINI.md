@@ -13,10 +13,10 @@ Read `AGENTS.md` completely before starting any work. It contains:
 
 ## Quick Reference
 
-- **Domain:** `nordigen`
-- **Title:** Nordigen for Home Assistant
-- **Class prefix:** `Nordigen`
-- **Main code:** `custom_components/nordigen/`
+- **Domain:** `open_banking`
+- **Title:** Open Banking (GoCardless)
+- **Class prefix:** `OpenBanking`
+- **Main code:** `custom_components/open_banking/`
 - **Validate:** `script/check` (type-check + lint + spell)
 - **Test:** `script/test`
 - **Run HA:** `./script/develop`

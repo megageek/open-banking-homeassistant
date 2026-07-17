@@ -2,7 +2,7 @@
 config/
 !config/configuration.yaml
 custom_components/
-!custom_components/nordigen/
+!custom_components/open_banking/
 
 # Auto-generated release files
 CHANGELOG.md

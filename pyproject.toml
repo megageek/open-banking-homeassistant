@@ -6,15 +6,15 @@
 # - [tool.pylint.*] - Optional additional linting (Ruff is sufficient)
 
 [project]
-name = "nordigen"
+name = "open-banking-homeassistant"
 version = "0.0.0"              # Version is managed in manifest.json only
 requires-python = ">=3.14"
 
 [tool.setuptools]
-packages = ["custom_components.nordigen"]
+packages = ["custom_components.open_banking"]
 
 [tool.pyright]
-include = ["custom_components/nordigen"]
+include = ["custom_components/open_banking"]
 exclude = [
     "**/.*",
     "**/__pycache__",
@@ -54,7 +54,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["custom_components/nordigen"]
+source = ["custom_components/open_banking"]
 omit = ["tests/*"]
 
 [tool.coverage.report]

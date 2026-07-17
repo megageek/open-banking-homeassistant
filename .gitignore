@@ -4,7 +4,7 @@ config/*
 
 # Custom components (HACS-installed dependencies and dev symlinks)
 custom_components/*
-!custom_components/nordigen/
+!custom_components/open_banking/
 
 # Development tool caches and dependency locks
 .ruff_cache/

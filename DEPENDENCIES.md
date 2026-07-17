@@ -8,7 +8,7 @@ This custom integration uses multiple requirements files to separate different t
 
 **Purpose:** Python packages needed by the integration at runtime
 **Installed by:** Home Assistant when loading the integration
-**Also defined in:** `custom_components/nordigen/manifest.json`
+**Also defined in:** `custom_components/open_banking/manifest.json`
 
 **Note:** This file is typically empty if this integration has no additional runtime dependencies beyond Home Assistant core.
 
@@ -110,7 +110,7 @@ The `script/setup/bootstrap` automatically installs dependencies from multiple s
 
 ### From Home Assistant Core
 
-**Version:** Configured via `HA_VERSION` in `.devcontainer/devcontainer.json` (currently `2025.12.3`)
+**Version:** Resolved from the minimum version in `hacs.json` (currently `2026.4.0`)
 
 1. **Runtime dependencies** (`requirements_all.txt`)
    - All packages that Home Assistant integrations might need

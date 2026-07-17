@@ -1,15 +1,13 @@
 {
-  "domain": "nordigen",
-  "name": "Nordigen for Home Assistant",
+  "domain": "open_banking",
+  "name": "Open Banking (GoCardless)",
   "codeowners": [
     "@megageek"
   ],
+  "config_flow": true,
   "documentation": "https://github.com/megageek/open-banking-homeassistant",
-  "integration_type": "service",
+  "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/megageek/open-banking-homeassistant/issues",
-  "requirements": [
-    "nordigen-ha-lib==0.3.0"
-  ],
-  "version": "0.3.0"
+  "version": "0.5.0"
 }

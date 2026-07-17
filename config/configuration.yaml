@@ -158,4 +158,4 @@ logger:
     homeassistant.config_entries: info
 
     # Your integration debug logging - shows EVERYTHING from your integration
-    custom_components.nordigen: debug
+    custom_components.open_banking: debug

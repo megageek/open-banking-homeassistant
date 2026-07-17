@@ -6,10 +6,10 @@
 
 ## Project Identity
 
-- **Domain:** `nordigen`
-- **Title:** Nordigen for Home Assistant
-- **Class prefix:** `Nordigen`
-- **Main code:** `custom_components/nordigen/`
+- **Domain:** `open_banking`
+- **Title:** Open Banking (GoCardless)
+- **Class prefix:** `OpenBanking`
+- **Main code:** `custom_components/open_banking/`
 - **Validate:** `script/check` (type-check + lint-check + spell-check)
 - **Start HA:** `./script/develop` (kills existing, starts on port 8123)
 - **Force restart:** `pkill -f "hass --config" || true && pkill -f "debugpy.*5678" || true && ./script/develop`
@@ -38,7 +38,7 @@ Generate code that passes these checks on first run. As an AI agent, you should 
 
 - `coordinator/` — DataUpdateCoordinator (base + data_processing + error_handling + listeners)
 - `api/` — External API client (async aiohttp)
-- `entity/` — Base entity class (`NordigenEntity`)
+- `entity/` — Base entity class (`OpenBankingEntity`)
 - `entity_utils/` — Entity-specific helpers (device_info, state formatting)
 - `config_flow_handler/` — Config flow with `schemas/` and `validators/` subdirs
 - `[platform]/` — One directory per platform (sensor, switch, etc.), one class per file
@@ -49,7 +49,7 @@ Generate code that passes these checks on first run. As an AI agent, you should 
 
 **Key patterns** (details in path-specific `*.instructions.md`):
 
-- Entity MRO: `(PlatformEntity, NordigenEntity)` — order matters
+- Entity MRO: `(PlatformEntity, OpenBankingEntity)` — order matters
 - Unique ID: `{entry_id}_{description.key}` (set in base entity)
 - Services: register in `async_setup()`, NOT `async_setup_entry()` (Quality Scale requirement)
 - Config entry data: `entry.runtime_data.client` / `entry.runtime_data.coordinator`
@@ -140,7 +140,7 @@ script/type-check   # Pyright — no auto-fix ever
 
 - Live: terminal where `./script/develop` runs
 - File: `config/home-assistant.log` (most recent), `config/home-assistant.log.1` (previous)
-- Debug level: `custom_components.nordigen: debug` in `config/configuration.yaml`
+- Debug level: `custom_components.open_banking: debug` in `config/configuration.yaml`
 
 ## Working With the Developer
 
