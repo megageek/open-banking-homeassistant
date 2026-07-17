@@ -65,4 +65,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: OpenBankingConfigEntry) 
 
 async def async_unload_entry(hass: HomeAssistant, entry: OpenBankingConfigEntry) -> bool:
     """Unload the integration entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        for coordinator in entry.runtime_data.coordinators.values():
+            await coordinator.async_shutdown()
+    return unload_ok

@@ -106,10 +106,29 @@ async def test_setup_entry_converts_invalid_credentials_to_reauth(hass) -> None:
         await async_setup_entry(hass, entry)
 
 
-async def test_unload_entry_unloads_sensor_platform(hass) -> None:
-    """Entry unload delegates all loaded platforms to Home Assistant."""
+async def test_unload_entry_stops_coordinators_after_platform_unload(hass) -> None:
+    """A successful unload cancels every coordinator's scheduled refresh."""
     entry = MagicMock()
+    first = MagicMock()
+    first.async_shutdown = AsyncMock()
+    second = MagicMock()
+    second.async_shutdown = AsyncMock()
+    entry.runtime_data.coordinators = {"bank-1": first, "bank-2": second}
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
 
     assert await async_unload_entry(hass, entry) is True
     hass.config_entries.async_unload_platforms.assert_awaited_once_with(entry, [Platform.SENSOR])
+    first.async_shutdown.assert_awaited_once()
+    second.async_shutdown.assert_awaited_once()
+
+
+async def test_failed_platform_unload_keeps_coordinators_running(hass) -> None:
+    """Coordinators remain active when Home Assistant cannot unload platforms."""
+    entry = MagicMock()
+    coordinator = MagicMock()
+    coordinator.async_shutdown = AsyncMock()
+    entry.runtime_data.coordinators = {"bank-1": coordinator}
+    hass.config_entries.async_unload_platforms = AsyncMock(return_value=False)
+
+    assert await async_unload_entry(hass, entry) is False
+    coordinator.async_shutdown.assert_not_awaited()
