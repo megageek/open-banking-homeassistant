@@ -32,8 +32,6 @@
     // Variables from .env also cannot influence DevContainer features — features are installed
     // during image build, before the container starts and before any lifecycle hook runs.
     //
-    // Enable asyncio debug mode for easier debugging of async code
-    "PYTHONASYNCIODEBUG": "1",
     // Ensure Python output is sent straight to terminal (e.g. for logging)
     "PYTHONUNBUFFERED": "1",
     // Prevent Python from writing .pyc files to disk
