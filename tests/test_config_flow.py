@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-from custom_components.open_banking.api import OpenBankingAuthenticationError
+from custom_components.open_banking.api import OpenBankingAuthenticationError, OpenBankingCommunicationError
 from custom_components.open_banking.const import CONF_SECRET_ID, CONF_SECRET_KEY, DOMAIN
 from homeassistant import config_entries, data_entry_flow
 
@@ -39,3 +39,19 @@ async def test_valid_credentials_continue_to_first_bank(hass, enable_custom_inte
 
     assert result["type"] is data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "connection"
+
+
+async def test_api_failure_keeps_flow_open_with_connection_error(hass, enable_custom_integrations) -> None:
+    """Network failures keep credential setup open with a connection error."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    with patch(
+        "custom_components.open_banking.config_flow_handler.config_flow.OpenBankingApiClient.async_authenticate",
+        AsyncMock(side_effect=OpenBankingCommunicationError),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_SECRET_ID: "valid", CONF_SECRET_KEY: "valid"},
+        )
+
+    assert result["type"] is data_entry_flow.FlowResultType.FORM
+    assert result["errors"] == {"base": "cannot_connect"}

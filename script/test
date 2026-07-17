@@ -12,12 +12,14 @@
 # Options:
 #   --cov           Generate coverage report (terminal output)
 #   --cov-html      Generate HTML coverage report in htmlcov/
+#   --live          Run only live API tests (requires OPEN_BANKING_SECRET_ID and OPEN_BANKING_SECRET_KEY)
 #
 # Examples:
 #   ./script/test
 #   ./script/test -v
 #   ./script/test --cov
 #   ./script/test --cov-html
+#   ./script/test --live
 #   ./script/test --cov -k test_midnight
 #   ./script/test tests/test_cache_validity.py
 
@@ -37,6 +39,7 @@ PYTHON="$VIRTUAL_ENV/bin/python"
 # Parse coverage flags
 COVERAGE_ARGS=()
 PYTEST_ARGS=()
+LIVE_TESTS=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -48,12 +51,25 @@ while [[ $# -gt 0 ]]; do
         COVERAGE_ARGS+=("--cov=$INTEGRATION_PATH" "--cov-report=html")
         shift
         ;;
+    --live)
+        LIVE_TESTS=true
+        shift
+        ;;
     *)
         PYTEST_ARGS+=("$1")
         shift
         ;;
     esac
 done
+
+if [[ "$LIVE_TESTS" == "true" ]]; then
+    # Non-interactive shells do not load the project-managed Bash/Zsh startup files.
+    # shellcheck source=.devcontainer/_load_env.sh
+    source "$PWD/.devcontainer/_load_env.sh"
+    PYTEST_ARGS+=("-m" "live_api")
+else
+    PYTEST_ARGS+=("-m" "not live_api")
+fi
 
 # Check if pytest and the Home Assistant test plugin are available
 if ! "$PYTHON" -c "import pytest, pytest_homeassistant_custom_component" 2>/dev/null; then

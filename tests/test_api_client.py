@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+from aiohttp import ClientError
 import pytest
 
 from custom_components.open_banking.api import (
     OpenBankingApiClient,
     OpenBankingAuthenticationError,
+    OpenBankingCommunicationError,
     OpenBankingInvalidResponseError,
     OpenBankingRateLimitError,
 )
@@ -25,6 +27,8 @@ class FakeResponse:
 
     async def json(self) -> object:
         """Return the configured payload."""
+        if isinstance(self.payload, Exception):
+            raise self.payload
         return self.payload
 
 
@@ -109,3 +113,44 @@ async def test_invalid_token_payload_is_rejected() -> None:
 
     with pytest.raises(OpenBankingInvalidResponseError):
         await client.async_authenticate()
+
+
+@pytest.mark.parametrize("status", [400, 500])
+async def test_http_errors_raise_communication_error(status: int) -> None:
+    """Non-authentication HTTP failures are communication errors."""
+    client, _ = client_with_responses(FakeResponse(status, {"detail": "service unavailable"}))
+
+    with pytest.raises(OpenBankingCommunicationError, match="service unavailable"):
+        await client.async_authenticate()
+
+
+async def test_invalid_json_is_rejected() -> None:
+    """Successful responses must contain JSON."""
+    client, _ = client_with_responses(FakeResponse(200, ClientError("invalid json")))
+
+    with pytest.raises(OpenBankingInvalidResponseError, match="not valid JSON"):
+        await client.async_authenticate()
+
+
+async def test_unexpected_payload_type_is_rejected() -> None:
+    """Scalar JSON responses are not accepted."""
+    client, _ = client_with_responses(FakeResponse(200, "unexpected"))
+
+    with pytest.raises(OpenBankingInvalidResponseError, match="unexpected type"):
+        await client.async_authenticate()
+
+
+async def test_delete_requisition_accepts_empty_response() -> None:
+    """A successful deletion accepts an HTTP 204 response."""
+    client, session = client_with_responses(
+        FakeResponse(200, {"access": "access", "refresh": "refresh"}),
+        FakeResponse(204, None),
+    )
+    await client.async_authenticate()
+
+    await client.async_delete_requisition("req-1")
+
+    assert session.request.call_args.args[:2] == (
+        "DELETE",
+        "https://bankaccountdata.gocardless.com/api/v2/requisitions/req-1/",
+    )
