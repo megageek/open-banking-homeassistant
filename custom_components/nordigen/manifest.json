@@ -1,0 +1,15 @@
+{
+  "domain": "nordigen",
+  "name": "Nordigen for Home Assistant",
+  "codeowners": [
+    "@megageek"
+  ],
+  "documentation": "https://github.com/megageek/open-banking-homeassistant",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/megageek/open-banking-homeassistant/issues",
+  "requirements": [
+    "nordigen-ha-lib==0.3.0"
+  ],
+  "version": "0.3.0"
+}

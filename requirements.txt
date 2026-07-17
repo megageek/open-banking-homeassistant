@@ -1,0 +1,8 @@
+# Runtime dependencies for the integration
+# These are installed by Home Assistant when the integration is loaded
+# See custom_components/nordigen/manifest.json for the authoritative list
+
+nordigen-ha-lib==0.3.0
+
+# Note: Home Assistant core dependencies are already available
+# Only list additional packages your integration needs
