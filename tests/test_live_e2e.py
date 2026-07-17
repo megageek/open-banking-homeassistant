@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 import os
 from pathlib import Path
 import re
@@ -116,6 +117,16 @@ async def test_live_sandbox_full_authorization_journey() -> None:
                     await browser.close()
 
             requisition = await _wait_for_linked_requisition(client, requisition_id)
+            agreement_id = requisition.get("agreement") or requisition.get("agreements")
+            assert isinstance(agreement_id, str)
+            agreement = await client.async_get_end_user_agreement(agreement_id)
+            accepted_value = agreement.get("accepted")
+            assert isinstance(accepted_value, str)
+            accepted = datetime.fromisoformat(accepted_value)
+            valid_days = int(agreement["access_valid_for_days"])
+            assert accepted <= datetime.now(UTC)
+            assert accepted + timedelta(days=valid_days) > datetime.now(UTC)
+
             accounts = requisition.get("accounts")
             assert isinstance(accounts, list)
             assert accounts
@@ -125,6 +136,11 @@ async def test_live_sandbox_full_authorization_journey() -> None:
                 details, balances = await _wait_for_account_data(client, account_id)
                 assert isinstance(details.get("account"), dict)
                 assert isinstance(balances.get("balances"), list)
+                for scope in ("details", "balances"):
+                    quota = client.account_rate_limits[(account_id, scope)]
+                    assert quota.limit > 0
+                    assert 0 <= quota.remaining < quota.limit
+                    assert quota.reset_after > 0
         finally:
             if requisition_id is not None:
                 await client.async_delete_requisition(requisition_id)

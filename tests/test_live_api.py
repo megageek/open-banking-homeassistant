@@ -64,6 +64,13 @@ async def test_live_sandbox_requisition_lifecycle() -> None:
             assert created["institution_id"] == SANDBOX_INSTITUTION_ID
             assert created["status"] == "CR"
             assert isinstance(created.get("link"), str)
+            agreement_id = created.get("agreement") or created.get("agreements")
+            assert isinstance(agreement_id, str)
+
+            agreement = await client.async_get_end_user_agreement(agreement_id)
+            assert agreement["id"] == agreement_id
+            assert int(agreement["access_valid_for_days"]) > 0
+            assert agreement["institution_id"] == SANDBOX_INSTITUTION_ID
 
             retrieved = await client.async_get_requisition(requisition_id)
 
@@ -71,6 +78,7 @@ async def test_live_sandbox_requisition_lifecycle() -> None:
             assert retrieved["institution_id"] == SANDBOX_INSTITUTION_ID
             assert retrieved["status"] == "CR"
             assert retrieved["accounts"] == []
+            assert (retrieved.get("agreement") or retrieved.get("agreements")) == agreement_id
         finally:
             if requisition_id is not None:
                 await client.async_delete_requisition(requisition_id)
