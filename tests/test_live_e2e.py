@@ -15,11 +15,11 @@ import pytest
 import pytest_socket
 
 from custom_components.open_banking.api import OpenBankingApiClient, OpenBankingCommunicationError
+from custom_components.open_banking.const import SANDBOX_INSTITUTION_ID
 
 pytestmark = pytest.mark.live_e2e
 
 API_HOST = "bankaccountdata.gocardless.com"
-SANDBOX_INSTITUTION_ID = "SANDBOXFINANCE_SFIN0000"
 TEST_REDIRECT_URL = "https://example.com/open-banking/callback"
 LINKED_STATUS = "LN"
 

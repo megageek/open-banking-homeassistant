@@ -26,6 +26,8 @@ from custom_components.open_banking.const import (
     DATA_CALLBACK_STATES,
     DOMAIN,
     REQUISITION_LINKED,
+    SANDBOX_INSTITUTION_ID,
+    SANDBOX_INSTITUTION_NAME,
     SUBENTRY_TYPE_INSTITUTION,
 )
 from homeassistant import config_entries
@@ -123,6 +125,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._institutions = {
                 str(institution["id"]): str(institution.get("name", institution["id"])) for institution in institutions
             }
+            self._institutions.setdefault(SANDBOX_INSTITUTION_ID, SANDBOX_INSTITUTION_NAME)
 
         if user_input is not None:
             institution_id = user_input[CONF_INSTITUTION_ID]

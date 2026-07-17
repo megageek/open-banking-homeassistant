@@ -20,6 +20,7 @@ from custom_components.open_banking.const import (
     CONF_REQUISITION_ID,
     DATA_CALLBACK_STATES,
     DOMAIN,
+    SANDBOX_INSTITUTION_ID,
 )
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
@@ -57,6 +58,7 @@ async def test_user_lists_institutions() -> None:
     result = await flow.async_step_user(_preferences())
 
     assert result["step_id"] == "institution"
+    assert flow._institutions[SANDBOX_INSTITUTION_ID] == "Sandbox Finance"  # noqa: SLF001
     client.async_get_institutions.assert_awaited_once_with("GB")
 
 

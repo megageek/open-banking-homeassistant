@@ -36,6 +36,8 @@ from custom_components.open_banking.const import (
     MAX_REFRESHES_PER_DAY,
     MIN_REFRESHES_PER_DAY,
     REQUISITION_LINKED,
+    SANDBOX_INSTITUTION_ID,
+    SANDBOX_INSTITUTION_NAME,
 )
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -125,6 +127,7 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
             self._institutions = {
                 str(institution["id"]): str(institution.get("name", institution["id"])) for institution in institutions
             }
+            self._institutions.setdefault(SANDBOX_INSTITUTION_ID, SANDBOX_INSTITUTION_NAME)
 
         if user_input is not None:
             institution_id = user_input[CONF_INSTITUTION_ID]
