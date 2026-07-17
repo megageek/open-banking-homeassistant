@@ -30,6 +30,14 @@ for dir in /workspaces/* /workspace; do
     fi
 done
 
+# Export project environment overrides for this shell and its child processes.
+if [ -n "$WORKSPACE_ROOT" ]; then
+    set -a
+    [ -f "$WORKSPACE_ROOT/.devcontainer/.env" ] && source "$WORKSPACE_ROOT/.devcontainer/.env"
+    [ -f "$WORKSPACE_ROOT/.devcontainer/.env.local" ] && source "$WORKSPACE_ROOT/.devcontainer/.env.local"
+    set +a
+fi
+
 # Home Assistant development aliases (work from anywhere!)
 if [ -n "$WORKSPACE_ROOT" ]; then
     if [ -d "$WORKSPACE_ROOT/node_modules/.bin" ]; then
