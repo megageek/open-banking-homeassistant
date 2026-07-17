@@ -16,7 +16,11 @@ CONF_INSTITUTION_ID = "institution_id"
 CONF_INSTITUTION_NAME = "institution_name"
 CONF_REQUISITION_ID = "requisition_id"
 CONF_REFERENCE = "reference"
+# Retained for callers that still reference the former setting key.
 CONF_REFRESH_INTERVAL = "refresh_interval"
+CONF_REFRESHES_PER_DAY = "refreshes_per_day"
+CONF_REFRESH_WINDOW_START = "refresh_window_start"
+CONF_REFRESH_WINDOW_END = "refresh_window_end"
 CONF_BALANCE_TYPES = "balance_types"
 CONF_RECONNECT = "reconnect"
 
@@ -25,9 +29,11 @@ DATA_CALLBACK_STATES = "callback_states"
 CALLBACK_PATH = "/api/open_banking/callback"
 CALLBACK_TTL = timedelta(minutes=30)
 
-DEFAULT_REFRESH_INTERVAL = 240
-MIN_REFRESH_INTERVAL = 60
-MAX_REFRESH_INTERVAL = 1440
+DEFAULT_REFRESHES_PER_DAY = 4
+DEFAULT_REFRESH_WINDOW_START = "07:00:00"
+DEFAULT_REFRESH_WINDOW_END = "22:00:00"
+MIN_REFRESHES_PER_DAY = 1
+MAX_REFRESHES_PER_DAY = 24
 
 REQUISITION_LINKED = "LN"
 REQUISITION_FAILED = {"EX", "RJ", "SU"}

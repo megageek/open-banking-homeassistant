@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any, NoReturn
 
 from aiohttp import ClientError, ClientResponse, ClientSession
@@ -17,6 +18,15 @@ from .exceptions import (
 API_BASE_URL = "https://bankaccountdata.gocardless.com/api/v2"
 
 
+@dataclass(frozen=True)
+class OpenBankingRateLimit:
+    """Rate limit reported for one account resource endpoint."""
+
+    limit: int
+    remaining: int
+    reset_after: int
+
+
 class OpenBankingApiClient:
     """Minimal native async client for the API endpoints used by the integration."""
 
@@ -27,6 +37,7 @@ class OpenBankingApiClient:
         self._session = session
         self._access_token: str | None = None
         self._refresh_token: str | None = None
+        self.account_rate_limits: dict[tuple[str, str], OpenBankingRateLimit] = {}
 
     async def async_authenticate(self) -> None:
         """Generate a new access and refresh token."""
@@ -141,7 +152,9 @@ class OpenBankingApiClient:
                         )
                     self._raise_authentication_error(await self._error_message(response))
                 if response.status == 429:
-                    retry_header = response.headers.get("Retry-After")
+                    retry_header = response.headers.get("X-RateLimit-Account-Success-Reset") or response.headers.get(
+                        "Retry-After"
+                    )
                     retry_after = int(retry_header) if retry_header and retry_header.isdigit() else None
                     self._raise_rate_limit_error(await self._error_message(response), retry_after)
                 if response.status >= 400:
@@ -151,6 +164,7 @@ class OpenBankingApiClient:
                     self._raise_communication_error(message)
                 if response.status == 204:
                     return {}
+                self._record_account_rate_limit(path, response.headers)
                 try:
                     payload = await response.json()
                 except (ClientError, ValueError) as err:
@@ -163,6 +177,22 @@ class OpenBankingApiClient:
         if not isinstance(payload, (dict, list)):
             raise OpenBankingInvalidResponseError("API response had an unexpected type")
         return payload
+
+    def _record_account_rate_limit(self, path: str, headers: Mapping[str, str]) -> None:
+        """Store quota metadata returned by a successful account request."""
+        parts = path.strip("/").split("/")
+        if len(parts) != 3 or parts[0] != "accounts" or parts[2] not in {"details", "balances", "transactions"}:
+            return
+        normalized = {key.lower().replace("_", "-").removeprefix("http-"): value for key, value in headers.items()}
+        try:
+            quota = OpenBankingRateLimit(
+                limit=int(normalized["x-ratelimit-account-success-limit"]),
+                remaining=int(normalized["x-ratelimit-account-success-remaining"]),
+                reset_after=int(normalized["x-ratelimit-account-success-reset"]),
+            )
+        except KeyError, ValueError:
+            return
+        self.account_rate_limits[(parts[1], parts[2])] = quota
 
     @staticmethod
     def _raise_authentication_error(message: str) -> NoReturn:

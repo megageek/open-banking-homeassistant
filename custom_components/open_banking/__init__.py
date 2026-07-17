@@ -8,6 +8,7 @@ from homeassistant.const import Platform
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.storage import Store
 
 from .api import OpenBankingApiClient, OpenBankingAuthenticationError
 from .callback import async_register_callback_view
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
 
 PLATFORMS = [Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+STORAGE_VERSION = 1
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -44,9 +46,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: OpenBankingConfigEntry) 
 
     coordinators: dict[str, OpenBankingDataUpdateCoordinator] = {}
     entry.runtime_data = OpenBankingData(client=client, coordinators=coordinators)
+    store = Store[dict](hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
+    snapshots = await store.async_load() or {}
     for subentry in entry.subentries.values():
-        coordinator = OpenBankingDataUpdateCoordinator(hass, entry, subentry, client)
+
+        async def async_save_snapshot(snapshot: dict, subentry_id: str = subentry.subentry_id) -> None:
+            snapshots[subentry_id] = snapshot
+            await store.async_save(snapshots)
+
+        coordinator = OpenBankingDataUpdateCoordinator(hass, entry, subentry, client, async_save_snapshot)
         coordinators[subentry.subentry_id] = coordinator
+        coordinator.async_restore_snapshot(snapshots.get(subentry.subentry_id))
         await coordinator.async_config_entry_first_refresh()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

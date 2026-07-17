@@ -21,22 +21,27 @@ from custom_components.open_banking.const import (
     CONF_INSTITUTION_NAME,
     CONF_RECONNECT,
     CONF_REFERENCE,
-    CONF_REFRESH_INTERVAL,
+    CONF_REFRESH_WINDOW_END,
+    CONF_REFRESH_WINDOW_START,
+    CONF_REFRESHES_PER_DAY,
     CONF_REQUISITION_ID,
     CONF_SECRET_ID,
     CONF_SECRET_KEY,
     DATA_CALLBACK_STATES,
     DEFAULT_BALANCE_TYPES,
-    DEFAULT_REFRESH_INTERVAL,
+    DEFAULT_REFRESH_WINDOW_END,
+    DEFAULT_REFRESH_WINDOW_START,
+    DEFAULT_REFRESHES_PER_DAY,
     DOMAIN,
-    MAX_REFRESH_INTERVAL,
-    MIN_REFRESH_INTERVAL,
+    MAX_REFRESHES_PER_DAY,
+    MIN_REFRESHES_PER_DAY,
     REQUISITION_LINKED,
 )
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.network import NoURLAvailableError, get_url
+from homeassistant.helpers.selector import TimeSelector
 from homeassistant.util import dt as dt_util
 
 COUNTRIES = [
@@ -92,6 +97,12 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
     ) -> config_entries.SubentryFlowResult:
         """Collect the country, account label, and polling preferences."""
         if user_input is not None:
+            if not _valid_refresh_window(user_input):
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=connection_schema(user_input),
+                    errors={"base": "invalid_refresh_window"},
+                )
             self._data.update(user_input)
             return await self.async_step_institution()
         return self.async_show_form(step_id="user", data_schema=connection_schema(self._data))
@@ -187,6 +198,12 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
             return self.async_show_form(step_id="reconfigure", data_schema=schema)
 
         reconnect = bool(user_input.pop(CONF_RECONNECT, False))
+        if not _valid_refresh_window(user_input):
+            return self.async_show_form(
+                step_id="reconfigure",
+                data_schema=connection_schema(user_input, include_reconnect=True),
+                errors={"base": "invalid_refresh_window"},
+            )
         self._data.update(user_input)
         if not reconnect:
             title = f"{self._data[CONF_ACCOUNT_HOLDER]} — {self._data[CONF_INSTITUTION_NAME]}"
@@ -248,9 +265,17 @@ def connection_schema(
         vol.Required(CONF_ACCOUNT_HOLDER, default=values.get(CONF_ACCOUNT_HOLDER, "")): cv.string,
         vol.Required(CONF_COUNTRY, default=values.get(CONF_COUNTRY, "GB")): vol.In(COUNTRIES),
         vol.Required(
-            CONF_REFRESH_INTERVAL,
-            default=values.get(CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL),
-        ): vol.All(vol.Coerce(int), vol.Range(min=MIN_REFRESH_INTERVAL, max=MAX_REFRESH_INTERVAL)),
+            CONF_REFRESHES_PER_DAY,
+            default=values.get(CONF_REFRESHES_PER_DAY, DEFAULT_REFRESHES_PER_DAY),
+        ): vol.All(vol.Coerce(int), vol.Range(min=MIN_REFRESHES_PER_DAY, max=MAX_REFRESHES_PER_DAY)),
+        vol.Required(
+            CONF_REFRESH_WINDOW_START,
+            default=values.get(CONF_REFRESH_WINDOW_START, DEFAULT_REFRESH_WINDOW_START),
+        ): TimeSelector(),
+        vol.Required(
+            CONF_REFRESH_WINDOW_END,
+            default=values.get(CONF_REFRESH_WINDOW_END, DEFAULT_REFRESH_WINDOW_END),
+        ): TimeSelector(),
         vol.Optional(
             CONF_BALANCE_TYPES,
             default=values.get(CONF_BALANCE_TYPES, DEFAULT_BALANCE_TYPES),
@@ -259,3 +284,8 @@ def connection_schema(
     if include_reconnect:
         schema[vol.Optional(CONF_RECONNECT, default=False)] = cv.boolean
     return vol.Schema(schema)
+
+
+def _valid_refresh_window(values: dict[str, Any]) -> bool:
+    """Return whether the active window starts before it ends."""
+    return str(values[CONF_REFRESH_WINDOW_START]) < str(values[CONF_REFRESH_WINDOW_END])

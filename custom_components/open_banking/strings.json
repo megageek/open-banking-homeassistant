@@ -12,6 +12,7 @@
     "error": {
       "cannot_connect": "Unable to connect to GoCardless.",
       "external_url_missing": "Configure an external Home Assistant URL before connecting a bank.",
+      "invalid_refresh_window": "The refresh window must end after it starts.",
       "invalid_auth": "The secret ID or secret key is invalid.",
       "unknown": "Unexpected error"
     },
@@ -30,7 +31,9 @@
           "account_holder": "Account holder label",
           "balance_types": "Balance types",
           "country": "Country",
-          "refresh_interval": "Refresh interval (minutes)"
+          "refreshes_per_day": "Refreshes per day",
+          "refresh_window_start": "Active window starts",
+          "refresh_window_end": "Active window ends"
         }
       },
       "institution": {
@@ -74,7 +77,8 @@
       },
       "error": {
         "cannot_connect": "Unable to connect to GoCardless.",
-        "external_url_missing": "Configure an external Home Assistant URL before connecting a bank."
+        "external_url_missing": "Configure an external Home Assistant URL before connecting a bank.",
+        "invalid_refresh_window": "The refresh window must end after it starts."
       },
       "step": {
         "user": {
@@ -83,7 +87,9 @@
             "account_holder": "Account holder label",
             "balance_types": "Balance types",
             "country": "Country",
-            "refresh_interval": "Refresh interval (minutes)"
+            "refreshes_per_day": "Refreshes per day",
+            "refresh_window_start": "Active window starts",
+            "refresh_window_end": "Active window ends"
           }
         },
         "institution": {
@@ -106,7 +112,9 @@
             "balance_types": "Balance types",
             "country": "Country",
             "reconnect": "Reconnect bank authorization",
-            "refresh_interval": "Refresh interval (minutes)"
+            "refreshes_per_day": "Refreshes per day",
+            "refresh_window_start": "Active window starts",
+            "refresh_window_end": "Active window ends"
           }
         }
       }
