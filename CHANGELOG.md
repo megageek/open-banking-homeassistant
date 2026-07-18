@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/megageek/open-banking-homeassistant/compare/v0.6.1...v0.6.2) (2026-07-18)
+
+
+### Bug Fixes
+
+* **config-flow:** clarify transaction storage text ([2e5d436](https://github.com/megageek/open-banking-homeassistant/commit/2e5d436bdffb359804536b7beced3c99fb75e67d))
+
 ## [0.6.1](https://github.com/megageek/open-banking-homeassistant/compare/v0.6.0...v0.6.1) (2026-07-18)
 
 
