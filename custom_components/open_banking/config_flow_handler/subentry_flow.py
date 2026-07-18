@@ -43,42 +43,52 @@ from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.selector import TimeSelector
+from homeassistant.helpers.selector import NumberSelector, NumberSelectorConfig, NumberSelectorMode, TimeSelector
 from homeassistant.util import dt as dt_util
 
-COUNTRIES = [
-    "AT",
-    "BE",
-    "BG",
-    "CY",
-    "CZ",
-    "DE",
-    "DK",
-    "EE",
-    "ES",
-    "FI",
-    "FR",
-    "GB",
-    "GR",
-    "HR",
-    "HU",
-    "IE",
-    "IS",
-    "IT",
-    "LI",
-    "LT",
-    "LU",
-    "LV",
-    "MT",
-    "NL",
-    "NO",
-    "PL",
-    "PT",
-    "RO",
-    "SE",
-    "SI",
-    "SK",
-]
+COUNTRIES = {
+    "AT": "Austria (AT)",
+    "BE": "Belgium (BE)",
+    "BG": "Bulgaria (BG)",
+    "CY": "Cyprus (CY)",
+    "CZ": "Czechia (CZ)",
+    "DE": "Germany (DE)",
+    "DK": "Denmark (DK)",
+    "EE": "Estonia (EE)",
+    "ES": "Spain (ES)",
+    "FI": "Finland (FI)",
+    "FR": "France (FR)",
+    "GB": "United Kingdom (GB)",
+    "GR": "Greece (GR)",
+    "HR": "Croatia (HR)",
+    "HU": "Hungary (HU)",
+    "IE": "Ireland (IE)",
+    "IS": "Iceland (IS)",
+    "IT": "Italy (IT)",
+    "LI": "Liechtenstein (LI)",
+    "LT": "Lithuania (LT)",
+    "LU": "Luxembourg (LU)",
+    "LV": "Latvia (LV)",
+    "MT": "Malta (MT)",
+    "NL": "Netherlands (NL)",
+    "NO": "Norway (NO)",
+    "PL": "Poland (PL)",
+    "PT": "Portugal (PT)",
+    "RO": "Romania (RO)",
+    "SE": "Sweden (SE)",
+    "SI": "Slovenia (SI)",
+    "SK": "Slovakia (SK)",
+}
+
+BALANCE_TYPES = {
+    "closingBooked": "Closing booked",
+    "expected": "Expected",
+    "forwardAvailable": "Forward available",
+    "interimAvailable": "Interim available",
+    "interimBooked": "Interim booked",
+    "nonInvoiced": "Not invoiced",
+    "openingBooked": "Opening booked",
+}
 
 
 class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
@@ -271,7 +281,14 @@ def connection_schema(
         vol.Required(
             CONF_REFRESHES_PER_DAY,
             default=values.get(CONF_REFRESHES_PER_DAY, DEFAULT_REFRESHES_PER_DAY),
-        ): vol.All(vol.Coerce(int), vol.Range(min=MIN_REFRESHES_PER_DAY, max=MAX_REFRESHES_PER_DAY)),
+        ): NumberSelector(
+            NumberSelectorConfig(
+                min=MIN_REFRESHES_PER_DAY,
+                max=MAX_REFRESHES_PER_DAY,
+                step=1,
+                mode=NumberSelectorMode.BOX,
+            )
+        ),
         vol.Required(
             CONF_REFRESH_WINDOW_START,
             default=values.get(CONF_REFRESH_WINDOW_START, DEFAULT_REFRESH_WINDOW_START),
@@ -283,7 +300,7 @@ def connection_schema(
         vol.Optional(
             CONF_BALANCE_TYPES,
             default=values.get(CONF_BALANCE_TYPES, DEFAULT_BALANCE_TYPES),
-        ): cv.multi_select({balance_type: balance_type for balance_type in DEFAULT_BALANCE_TYPES}),
+        ): cv.multi_select(BALANCE_TYPES),
     }
     if include_reconnect:
         schema[vol.Optional(CONF_RECONNECT, default=False)] = cv.boolean

@@ -23,7 +23,8 @@
       },
       "connection": {
         "title": "Bank connection settings",
-        "data": {"account_holder": "Account holder label", "balance_types": "Balance types", "country": "Country", "refresh_window_end": "Active window ends", "refresh_window_start": "Active window starts", "refreshes_per_day": "Refreshes per day"}
+        "data": {"account_holder": "Connection label", "balance_types": "Balance types", "country": "Country", "refresh_window_end": "Active window ends", "refresh_window_start": "Active window starts", "refreshes_per_day": "Refreshes per day"},
+        "data_description": {"account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.", "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.", "country": "The country in which your bank account is held.", "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance."}
       },
       "institution": {"title": "Select your bank", "data": {"institution_id": "Institution"}},
       "authorize": {"title": "Authorize your bank", "description": "Open the bank website and authorize access. This window will advance automatically when authorization returns to Home Assistant."},
@@ -57,14 +58,16 @@
       "step": {
         "user": {
           "title": "Bank connection settings",
-          "data": {"account_holder": "Account holder label", "balance_types": "Balance types", "country": "Country", "refresh_window_end": "Active window ends", "refresh_window_start": "Active window starts", "refreshes_per_day": "Refreshes per day"}
+          "data": {"account_holder": "Connection label", "balance_types": "Balance types", "country": "Country", "refresh_window_end": "Active window ends", "refresh_window_start": "Active window starts", "refreshes_per_day": "Refreshes per day"},
+          "data_description": {"account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.", "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.", "country": "The country in which your bank account is held.", "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance."}
         },
         "institution": {"title": "Select your bank", "data": {"institution_id": "Institution"}},
         "authorize": {"title": "Authorize your bank", "description": "Open the bank website and authorize access. This window will advance automatically when authorization returns to Home Assistant."},
         "finish": {"title": "Finishing bank connection"},
         "reconfigure": {
           "title": "Update bank connection",
-          "data": {"account_holder": "Account holder label", "balance_types": "Balance types", "country": "Country", "reconnect": "Reconnect bank authorization", "refresh_window_end": "Active window ends", "refresh_window_start": "Active window starts", "refreshes_per_day": "Refreshes per day"}
+          "data": {"account_holder": "Connection label", "balance_types": "Balance types", "country": "Country", "reconnect": "Reconnect bank authorization", "refresh_window_end": "Active window ends", "refresh_window_start": "Active window starts", "refreshes_per_day": "Refreshes per day"},
+          "data_description": {"account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.", "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.", "country": "The country in which your bank account is held.", "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance."}
         }
       }
     }

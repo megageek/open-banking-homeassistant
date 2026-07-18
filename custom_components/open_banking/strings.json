@@ -27,12 +27,18 @@
       "connection": {
         "title": "Bank connection settings",
         "data": {
-          "account_holder": "Account holder label",
+          "account_holder": "Connection label",
           "balance_types": "Balance types",
           "country": "Country",
           "refreshes_per_day": "Refreshes per day",
           "refresh_window_start": "Active window starts",
           "refresh_window_end": "Active window ends"
+        },
+        "data_description": {
+          "account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.",
+          "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.",
+          "country": "The country in which your bank account is held.",
+          "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance."
         }
       },
       "institution": {
@@ -87,12 +93,18 @@
         "user": {
           "title": "Bank connection settings",
           "data": {
-            "account_holder": "Account holder label",
+            "account_holder": "Connection label",
             "balance_types": "Balance types",
             "country": "Country",
             "refreshes_per_day": "Refreshes per day",
             "refresh_window_start": "Active window starts",
             "refresh_window_end": "Active window ends"
+          },
+          "data_description": {
+            "account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.",
+            "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.",
+            "country": "The country in which your bank account is held.",
+            "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance."
           }
         },
         "institution": {
@@ -111,13 +123,19 @@
         "reconfigure": {
           "title": "Update bank connection",
           "data": {
-            "account_holder": "Account holder label",
+            "account_holder": "Connection label",
             "balance_types": "Balance types",
             "country": "Country",
             "reconnect": "Reconnect bank authorization",
             "refreshes_per_day": "Refreshes per day",
             "refresh_window_start": "Active window starts",
             "refresh_window_end": "Active window ends"
+          },
+          "data_description": {
+            "account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.",
+            "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.",
+            "country": "The country in which your bank account is held.",
+            "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance."
           }
         }
       }
