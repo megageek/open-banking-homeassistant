@@ -8,7 +8,7 @@ Bank Account Data.
 One parent config entry represents a GoCardless credential pair. Institution
 connections are Home Assistant config subentries so credentials are stored once
 while each bank retains its own requisition, account-holder label, balance-type
-selection, and polling interval.
+selection, daily refresh count, and active refresh window.
 
 The parent flow validates credentials and immediately chains into the first
 institution subentry flow. Bank authorization uses an external config-flow step
@@ -25,7 +25,7 @@ OpenBankingApiClient
         │
         ├── institution subentry ── OpenBankingDataUpdateCoordinator
         │                                  │
-        │                                  ├── connection status sensor
+        │                                  ├── connection diagnostic sensors
         │                                  └── account balance sensors
         └── additional subentries follow the same pattern
 ```
@@ -36,13 +36,17 @@ HTTP, authentication, invalid-response, and rate-limit failures into typed
 exceptions.
 
 Each subentry has one coordinator. A refresh loads its requisition, account
-details, and balances. The default four-hour interval is intentionally
-conservative because rate limits are imposed per bank account.
+details, and balances. The coordinator schedules a configurable number of daily
+refreshes at evenly distributed slots within a local-time active window. The
+default is four refreshes between 07:00 and 22:00. It persists the most recent
+data and refresh timestamps, applies the most restrictive account rate limit it
+observes, and delays work until the reported reset time when a quota is
+exhausted.
 
 ## Entity and device model
 
 - Each institution connection is a service device with a diagnostic enum status
-  sensor.
+  sensor and diagnostic timestamp sensors for its last and next refresh.
 - Each returned bank account is a child device with one monetary sensor for each
   selected balance type present in the API response.
 - Entity unique IDs use opaque GoCardless account/requisition identifiers; no

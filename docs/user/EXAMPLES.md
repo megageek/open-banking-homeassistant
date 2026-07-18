@@ -18,3 +18,11 @@ template:
 ```
 
 Only combine accounts that use the same currency.
+
+## Refresh timestamps
+
+Each bank connection provides **Last refresh** and **Next refresh** timestamp
+sensors. They can be used in dashboards and automations just like other Home
+Assistant timestamp sensors. The next-refresh value follows the configured
+daily schedule and may move later when a bank reports that its rate limit has
+been exhausted.

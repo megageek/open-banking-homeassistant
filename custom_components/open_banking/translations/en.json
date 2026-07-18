@@ -17,7 +17,7 @@
     },
     "step": {
       "user": {
-        "title": "Connect GoCardless Bank Account Data",
+        "title": "Connect Open Banking via GoCardless",
         "description": "Enter the user secrets from your GoCardless Bank Account Data account.",
         "data": {"secret_id": "Secret ID", "secret_key": "Secret key"}
       },

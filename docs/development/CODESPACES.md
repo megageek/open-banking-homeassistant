@@ -1,6 +1,6 @@
 # GitHub Codespaces Development Guide
 
-Open Banking (GoCardless) is fully compatible with GitHub Codespaces for cloud-based development.
+Open Banking via GoCardless is fully compatible with GitHub Codespaces for cloud-based development.
 
 ## Quick Start
 

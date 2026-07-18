@@ -14,7 +14,7 @@ Read `AGENTS.md` completely before starting any work. It contains:
 ## Quick Reference
 
 - **Domain:** `open_banking`
-- **Title:** Open Banking (GoCardless)
+- **Title:** Open Banking via GoCardless
 - **Class prefix:** `OpenBanking`
 - **Main code:** `custom_components/open_banking/`
 - **Validate:** `script/check` (type-check + lint + spell)

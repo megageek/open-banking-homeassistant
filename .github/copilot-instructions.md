@@ -7,7 +7,7 @@
 ## Project Identity
 
 - **Domain:** `open_banking`
-- **Title:** Open Banking (GoCardless)
+- **Title:** Open Banking via GoCardless
 - **Class prefix:** `OpenBanking`
 - **Main code:** `custom_components/open_banking/`
 - **Validate:** `script/check` (type-check + lint-check + spell-check)

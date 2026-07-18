@@ -177,7 +177,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             key: value for key, value in self._data.items() if key not in {CONF_SECRET_ID, CONF_SECRET_KEY}
         }
         return self.async_create_entry(
-            title="GoCardless Bank Account Data",
+            title="Open Banking via GoCardless",
             data=credentials,
             subentries=[
                 {

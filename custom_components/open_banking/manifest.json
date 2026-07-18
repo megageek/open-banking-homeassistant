@@ -1,6 +1,6 @@
 {
   "domain": "open_banking",
-  "name": "Open Banking (GoCardless)",
+  "name": "Open Banking via GoCardless",
   "codeowners": [
     "@megageek"
   ],

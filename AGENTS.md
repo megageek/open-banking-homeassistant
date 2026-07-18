@@ -9,7 +9,7 @@ This is a Home Assistant custom integration that was generated from a blueprint 
 **Integration details:**
 
 - **Domain:** `open_banking`
-- **Title:** Open Banking (GoCardless)
+- **Title:** Open Banking via GoCardless
 - **Repository:** megageek/open-banking-homeassistant
 
 **Key directories:**
@@ -188,14 +188,14 @@ As an AI agent, **aim for Silver or Gold Quality Scale** when generating code:
 This integration uses the following identifiers consistently:
 
 - **Domain:** `open_banking`
-- **Title:** Open Banking (GoCardless)
+- **Title:** Open Banking via GoCardless
 - **Class prefix:** `OpenBanking`
 
 **When creating new files:**
 
 - Use the domain `open_banking` for all DOMAIN references
 - Prefix all integration-specific classes with `OpenBanking`
-- Use "Open Banking (GoCardless)" as the display title
+- Use "Open Banking via GoCardless" as the display title
 - Never hardcode different values
 
 ### Integration Structure

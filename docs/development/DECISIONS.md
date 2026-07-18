@@ -35,7 +35,7 @@ Each decision is documented with:
 **Consequences:**
 
 - All entities must inherit from `CoordinatorEntity`
-- Single update interval applies to all entities
+- Each institution subentry has one coordinator and refresh schedule
 - Data is fetched even if no entities are enabled
 - Coordinator manages entity lifecycle and availability
 
@@ -118,11 +118,14 @@ Each decision is documented with:
 
 Consider implementing state restoration for switches and configurable settings to maintain state across Home Assistant restarts when the external device is unavailable.
 
-### Multi-Device Support
+### Account Device Discovery
 
-**Status:** Not yet implemented
+**Status:** Implemented
 
-Current architecture assumes single device per config entry. If multi-device support is needed, coordinator data structure will need redesign to map device ID → data.
+Each institution is represented by a service device and each account returned by
+that institution is represented by a child device. Account devices and their
+selected balance sensors are added dynamically when they appear in coordinator
+data.
 
 ### Polling vs. Push
 
