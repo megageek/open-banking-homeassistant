@@ -24,6 +24,7 @@ class OpenBankingBalanceSensor(OpenBankingEntity, SensorEntity):
         account_id: str,
         balance_type: str,
         account: dict[str, Any],
+        account_name: str,
         institution_identifier: tuple[str, str],
     ) -> None:
         """Initialize the balance sensor."""
@@ -36,7 +37,7 @@ class OpenBankingBalanceSensor(OpenBankingEntity, SensorEntity):
         self._attr_translation_placeholders = {"balance_type": balance_type}
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, account_id)},
-            name=details.get("name") or details.get("product") or "Bank account",
+            name=account_name,
             manufacturer="GoCardless",
             model=details.get("product") or "Bank account",
             via_device=institution_identifier,
