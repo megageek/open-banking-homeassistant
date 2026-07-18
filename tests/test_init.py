@@ -25,11 +25,12 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 
 
 async def test_setup_registers_callback_view(hass) -> None:
-    """Integration setup registers the authorization callback endpoint."""
+    """Integration setup registers its callback and transaction response action."""
     with patch("custom_components.open_banking.async_register_callback_view") as register:
         assert await async_setup(hass, {}) is True
 
     register.assert_called_once_with(hass)
+    assert hass.services.has_service(DOMAIN, "get_transactions")
 
 
 async def test_setup_entry_authenticates_refreshes_and_forwards_platforms(hass) -> None:

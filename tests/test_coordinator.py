@@ -19,6 +19,8 @@ from custom_components.open_banking.const import (
     CONF_REFRESH_WINDOW_START,
     CONF_REFRESHES_PER_DAY,
     CONF_REQUISITION_ID,
+    CONF_TRANSACTION_STORAGE,
+    TRANSACTION_STORAGE_ENCRYPTED,
 )
 from custom_components.open_banking.coordinator import OpenBankingDataUpdateCoordinator
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -66,6 +68,54 @@ async def test_coordinator_does_not_load_unlinked_accounts(hass) -> None:
     assert data["requisition"] == {"status": "UA", "accounts": ["account-1"]}
     assert data["accounts"] == {}
     client.async_get_account_details.assert_not_awaited()
+
+
+def test_transaction_diagnostics_are_aggregate_and_sanitized(hass) -> None:
+    """Transaction diagnostics expose operational aggregates without financial data."""
+    client = MagicMock()
+    client.account_rate_limits = {
+        ("account-secret", "transactions"): SimpleNamespace(limit=10, remaining=7, reset_after=3600)
+    }
+    subentry = MagicMock(subentry_id="bank-1")
+    subentry.data = {
+        CONF_REQUISITION_ID: "req-1",
+        CONF_TRANSACTION_STORAGE: TRANSACTION_STORAGE_ENCRYPTED,
+    }
+    coordinator = OpenBankingDataUpdateCoordinator(hass, MagicMock(), subentry, client)
+    coordinator.async_set_updated_data(
+        {"accounts": {"account-secret": {"details": {"currency": "GBP"}, "balances": []}}}
+    )
+    coordinator._transactions = {  # noqa: SLF001
+        "account-secret": {
+            "booked": [{"id": "transaction-secret", "currency": "GBP", "amount": "-10", "description": "Private"}],
+            "pending": [{"id": "pending-secret", "currency": "EUR", "counterparty": "Private shop"}],
+            "updated_at": "2026-07-18T12:00:00+00:00",
+            "truncated": False,
+        }
+    }
+
+    diagnostics = coordinator.diagnostics()["transactions"]
+
+    assert diagnostics == {
+        "mode": TRANSACTION_STORAGE_ENCRYPTED,
+        "updated_at": "2026-07-18T12:00:00+00:00",
+        "booked_count": 1,
+        "pending_count": 1,
+        "truncated": False,
+        "currency_mismatch_count": 1,
+        "last_error_category": None,
+        "last_error_at": None,
+        "encryption_format_version": 1,
+        "quota_limit": 10,
+        "quota_remaining": 7,
+        "quota_reset_after": 3600,
+        "blocked_until": None,
+    }
+    serialized = str(diagnostics)
+    assert "account-secret" not in serialized
+    assert "transaction-secret" not in serialized
+    assert "Private" not in serialized
+    assert "-10" not in serialized
 
 
 async def test_coordinator_tracks_agreement_expiry_and_creates_warning(hass) -> None:
