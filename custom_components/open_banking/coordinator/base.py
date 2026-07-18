@@ -61,6 +61,7 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._cancel_scheduled_refresh: CALLBACK_TYPE | None = None
         self._quota_limit: int | None = None
         self._quota_blocked_until: datetime | None = None
+        self._last_refresh_at: datetime | None = None
         self._next_refresh_at: datetime | None = None
         self._agreement_id: str | None = None
         self._requisition_expires_at: datetime | None = None
@@ -78,6 +79,16 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Return the known consent expiry timestamp."""
         return self._requisition_expires_at
 
+    @property
+    def last_refresh_at(self) -> datetime | None:
+        """Return when account data was last refreshed successfully."""
+        return self._last_refresh_at
+
+    @property
+    def next_refresh_at(self) -> datetime | None:
+        """Return when the next account data refresh is scheduled."""
+        return self._next_refresh_at
+
     def async_restore_snapshot(self, snapshot: dict[str, Any] | None) -> None:
         """Restore saved coordinator and scheduling state."""
         if snapshot and snapshot.get("requisition_id") != self.subentry.data.get(CONF_REQUISITION_ID):
@@ -86,6 +97,7 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.async_set_updated_data(snapshot["data"])
             self._quota_limit = _optional_int(snapshot.get("quota_limit"))
             self._quota_blocked_until = _parse_datetime(snapshot.get("quota_blocked_until"))
+            self._last_refresh_at = _parse_datetime(snapshot.get("last_refresh_at"))
             self._next_refresh_at = _parse_datetime(snapshot.get("next_refresh_at"))
             agreement_id = snapshot.get("agreement_id")
             self._agreement_id = agreement_id if isinstance(agreement_id, str) else None
@@ -149,6 +161,7 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ) from err
         else:
             data = {"requisition": requisition, "accounts": accounts}
+            self._last_refresh_at = dt_util.utcnow()
             self._update_quota(accounts)
             status = str(requisition.get("status", ""))
             self._update_expiry_issue(status)
@@ -159,6 +172,8 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._next_refresh_at = None
             else:
                 self._schedule_at(self._next_scheduled_time())
+            data["last_refresh_at"] = self._last_refresh_at.isoformat()
+            data["next_refresh_at"] = self._next_refresh_at.isoformat() if self._next_refresh_at else None
             await self._save_snapshot(self._snapshot(data))
             return data
 
@@ -281,6 +296,7 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return {
             "data": data,
             "requisition_id": self.subentry.data.get(CONF_REQUISITION_ID),
+            "last_refresh_at": self._last_refresh_at.isoformat() if self._last_refresh_at else None,
             "next_refresh_at": self._next_refresh_at.isoformat() if self._next_refresh_at else None,
             "quota_limit": self._quota_limit,
             "quota_blocked_until": self._quota_blocked_until.isoformat() if self._quota_blocked_until else None,

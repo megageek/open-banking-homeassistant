@@ -159,6 +159,12 @@
           "su": "Suspended",
           "ua": "Authenticating"
         }
+      },
+      "last_refresh": {
+        "name": "Last refresh"
+      },
+      "next_refresh": {
+        "name": "Next refresh"
       }
     }
   },

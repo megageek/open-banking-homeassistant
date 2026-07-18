@@ -75,7 +75,9 @@
   "entity": {
     "sensor": {
       "balance": {"name": "{balance_type} balance"},
-      "connection_status": {"name": "Connection status", "state": {"cr": "Created", "ex": "Expired", "ga": "Granting access", "gc": "Giving consent", "ln": "Linked", "rj": "Rejected", "sa": "Selecting accounts", "su": "Suspended", "ua": "Authenticating"}}
+      "connection_status": {"name": "Connection status", "state": {"cr": "Created", "ex": "Expired", "ga": "Granting access", "gc": "Giving consent", "ln": "Linked", "rj": "Rejected", "sa": "Selecting accounts", "su": "Suspended", "ua": "Authenticating"}},
+      "last_refresh": {"name": "Last refresh"},
+      "next_refresh": {"name": "Next refresh"}
     }
   },
   "exceptions": {

@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 from custom_components.open_banking.const import CONF_BALANCE_TYPES, DEFAULT_BALANCE_TYPES, DOMAIN
 
 from .balance import OpenBankingBalanceSensor
+from .last_refresh import OpenBankingLastRefreshSensor
+from .next_refresh import OpenBankingNextRefreshSensor
 from .status import OpenBankingStatusSensor
 
 if TYPE_CHECKING:
@@ -35,7 +37,11 @@ def _async_setup_coordinator(
     """Set up status and dynamically discovered accounts for one institution."""
     subentry_id = coordinator.subentry.subentry_id
     async_add_entities(
-        [OpenBankingStatusSensor(coordinator)],
+        [
+            OpenBankingStatusSensor(coordinator),
+            OpenBankingLastRefreshSensor(coordinator),
+            OpenBankingNextRefreshSensor(coordinator),
+        ],
         config_subentry_id=subentry_id,
     )
     institution_identifier = (DOMAIN, subentry_id)
