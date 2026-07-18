@@ -23,7 +23,6 @@ from custom_components.open_banking.const import (
     CONF_REQUISITION_ID,
     CONF_SECRET_ID,
     CONF_SECRET_KEY,
-    DATA_CALLBACK_STATES,
     DOMAIN,
     REQUISITION_LINKED,
     SANDBOX_INSTITUTION_ID,
@@ -259,8 +258,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         state_token = secrets.token_urlsafe(32)
         callback_url = str(URL(external_url).with_path(CALLBACK_PATH).with_query({"state": state_token}))
         reference = uuid4().hex
-        states: dict[str, CallbackState] = self.hass.data[DOMAIN][DATA_CALLBACK_STATES]
-        async_store_callback_state(
+        states = async_store_callback_state(
             self.hass,
             state_token,
             CallbackState(

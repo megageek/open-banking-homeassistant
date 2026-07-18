@@ -79,8 +79,13 @@ def async_register_callback_view(hass: HomeAssistant) -> None:
     hass.http.register_view(OpenBankingCallbackView())
 
 
-def async_store_callback_state(hass: HomeAssistant, token: str, state: CallbackState) -> None:
-    """Store callback state and remove it after its validity window."""
+def async_store_callback_state(
+    hass: HomeAssistant,
+    token: str,
+    state: CallbackState,
+) -> dict[str, CallbackState]:
+    """Initialize the callback endpoint, store state, and schedule its expiry."""
+    async_register_callback_view(hass)
     states: dict[str, CallbackState] = hass.data[DOMAIN][DATA_CALLBACK_STATES]
     states[token] = state
 
@@ -88,3 +93,4 @@ def async_store_callback_state(hass: HomeAssistant, token: str, state: CallbackS
         states.pop(token, None)
 
     async_call_later(hass, CALLBACK_TTL, expire_state)
+    return states

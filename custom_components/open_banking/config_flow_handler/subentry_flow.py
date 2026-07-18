@@ -27,12 +27,10 @@ from custom_components.open_banking.const import (
     CONF_REQUISITION_ID,
     CONF_SECRET_ID,
     CONF_SECRET_KEY,
-    DATA_CALLBACK_STATES,
     DEFAULT_BALANCE_TYPES,
     DEFAULT_REFRESH_WINDOW_END,
     DEFAULT_REFRESH_WINDOW_START,
     DEFAULT_REFRESHES_PER_DAY,
-    DOMAIN,
     MAX_REFRESHES_PER_DAY,
     MIN_REFRESHES_PER_DAY,
     REQUISITION_LINKED,
@@ -235,8 +233,7 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
         state_token = secrets.token_urlsafe(32)
         callback_url = str(URL(external_url).with_path(CALLBACK_PATH).with_query({"state": state_token}))
         reference = uuid4().hex
-        states: dict[str, CallbackState] = self.hass.data[DOMAIN][DATA_CALLBACK_STATES]
-        async_store_callback_state(
+        states = async_store_callback_state(
             self.hass,
             state_token,
             CallbackState(
