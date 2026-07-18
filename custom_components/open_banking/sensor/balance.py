@@ -35,11 +35,16 @@ class OpenBankingBalanceSensor(OpenBankingEntity, SensorEntity):
         self._attr_unique_id = f"{account_id}-{balance_type}"
         self._attr_translation_key = "balance"
         self._attr_translation_placeholders = {"balance_type": balance_type}
+        identifier = next(
+            (str(details[key]) for key in ("iban", "bban", "scan", "resourceId") if details.get(key)),
+            account_id,
+        )
+        product = str(details.get("product") or details.get("cashAccountType") or "Bank account")
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, account_id)},
             name=account_name,
             manufacturer="GoCardless",
-            model=details.get("product") or "Bank account",
+            model=f"{product} (•••• {identifier[-4:]})",
             via_device=institution_identifier,
         )
 
