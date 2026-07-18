@@ -16,6 +16,8 @@ from custom_components.open_banking.const import (
     CONF_REFRESHES_PER_DAY,
     CONF_SECRET_ID,
     CONF_SECRET_KEY,
+    CONF_TRANSACTION_STORAGE,
+    DEFAULT_TRANSACTION_STORAGE,
     DOMAIN,
 )
 from homeassistant.const import Platform
@@ -40,6 +42,7 @@ async def test_setup_entry_authenticates_refreshes_and_forwards_platforms(hass) 
     client.async_authenticate = AsyncMock()
     coordinator = MagicMock()
     coordinator.async_config_entry_first_refresh = AsyncMock()
+    coordinator.async_restore_transactions = AsyncMock()
     hass.config_entries.async_forward_entry_setups = AsyncMock()
 
     with (
@@ -85,6 +88,7 @@ async def test_setup_entry_restores_and_persists_subentry_snapshot(hass) -> None
     client.async_authenticate = AsyncMock()
     coordinator = MagicMock()
     coordinator.async_config_entry_first_refresh = AsyncMock()
+    coordinator.async_restore_transactions = AsyncMock()
     hass.config_entries.async_forward_entry_setups = AsyncMock()
 
     with (
@@ -168,7 +172,8 @@ async def test_migrate_legacy_refresh_interval_to_current_defaults(hass) -> None
     assert subentry.data[CONF_REFRESH_WINDOW_START] == "07:00:00"
     assert subentry.data[CONF_REFRESH_WINDOW_END] == "22:00:00"
     assert subentry.data["institution_id"] == "BANK"
-    assert entry.minor_version == 2
+    assert subentry.data[CONF_TRANSACTION_STORAGE] == DEFAULT_TRANSACTION_STORAGE
+    assert entry.minor_version == 3
 
 
 async def test_migration_preserves_current_schedule_and_is_idempotent(hass) -> None:
@@ -193,9 +198,11 @@ async def test_migration_preserves_current_schedule_and_is_idempotent(hass) -> N
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry) is True
-    assert dict(next(iter(entry.subentries.values())).data) == schedule
+    assert dict(next(iter(entry.subentries.values())).data) == schedule | {
+        CONF_TRANSACTION_STORAGE: DEFAULT_TRANSACTION_STORAGE
+    }
     assert await async_migrate_entry(hass, entry) is True
-    assert entry.minor_version == 2
+    assert entry.minor_version == 3
 
 
 async def test_migration_rejects_future_major_version(hass) -> None:

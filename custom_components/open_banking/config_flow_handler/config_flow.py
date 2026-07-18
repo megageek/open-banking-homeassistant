@@ -23,11 +23,14 @@ from custom_components.open_banking.const import (
     CONF_REQUISITION_ID,
     CONF_SECRET_ID,
     CONF_SECRET_KEY,
+    CONF_TRANSACTION_STORAGE,
+    DEFAULT_TRANSACTION_STORAGE,
     DOMAIN,
     REQUISITION_LINKED,
     SANDBOX_INSTITUTION_ID,
     SANDBOX_INSTITUTION_NAME,
     SUBENTRY_TYPE_INSTITUTION,
+    TRANSACTION_STORAGE_ENCRYPTED,
 )
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -54,7 +57,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Configure GoCardless API credentials."""
 
     VERSION = 1
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     def __init__(self) -> None:
         """Initialize transient initial-connection state."""
@@ -104,8 +107,19 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Collect settings for the first bank connection."""
         if user_input is not None:
             self._data.update(user_input)
+            if user_input.get(CONF_TRANSACTION_STORAGE, DEFAULT_TRANSACTION_STORAGE) == TRANSACTION_STORAGE_ENCRYPTED:
+                return await self.async_step_transaction_storage_warning()
             return await self.async_step_institution()
         return self.async_show_form(step_id="connection", data_schema=connection_schema(self._data))
+
+    async def async_step_transaction_storage_warning(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Confirm encrypted local transaction persistence."""
+        if user_input is None:
+            return self.async_show_form(step_id="transaction_storage_warning", data_schema=vol.Schema({}))
+        return await self.async_step_institution()
 
     async def async_step_institution(
         self,

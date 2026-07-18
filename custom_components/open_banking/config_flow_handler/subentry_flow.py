@@ -27,15 +27,20 @@ from custom_components.open_banking.const import (
     CONF_REQUISITION_ID,
     CONF_SECRET_ID,
     CONF_SECRET_KEY,
+    CONF_TRANSACTION_STORAGE,
     DEFAULT_BALANCE_TYPES,
     DEFAULT_REFRESH_WINDOW_END,
     DEFAULT_REFRESH_WINDOW_START,
     DEFAULT_REFRESHES_PER_DAY,
+    DEFAULT_TRANSACTION_STORAGE,
     MAX_REFRESHES_PER_DAY,
     MIN_REFRESHES_PER_DAY,
     REQUISITION_LINKED,
     SANDBOX_INSTITUTION_ID,
     SANDBOX_INSTITUTION_NAME,
+    TRANSACTION_STORAGE_DISABLED,
+    TRANSACTION_STORAGE_ENCRYPTED,
+    TRANSACTION_STORAGE_MEMORY,
 )
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -87,6 +92,11 @@ BALANCE_TYPES = {
     "nonInvoiced": "Not invoiced",
     "openingBooked": "Opening booked",
 }
+TRANSACTION_STORAGE_MODES = {
+    TRANSACTION_STORAGE_DISABLED: "Disabled",
+    TRANSACTION_STORAGE_MEMORY: "Memory only",
+    TRANSACTION_STORAGE_ENCRYPTED: "Encrypted persistent",
+}
 
 
 class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
@@ -100,6 +110,8 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
         self._reconfigure = False
         self._state_token: str | None = None
         self._authorization_url: str | None = None
+        self._warning_next_step: str | None = None
+        self._pending_reconnect = False
 
     async def async_step_user(
         self,
@@ -114,6 +126,9 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
                     errors={"base": "invalid_refresh_window"},
                 )
             self._data.update(user_input)
+            if user_input.get(CONF_TRANSACTION_STORAGE, DEFAULT_TRANSACTION_STORAGE) == TRANSACTION_STORAGE_ENCRYPTED:
+                self._warning_next_step = "institution"
+                return await self.async_step_transaction_storage_warning()
             return await self.async_step_institution()
         return self.async_show_form(step_id="user", data_schema=connection_schema(self._data))
 
@@ -210,6 +225,7 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
             return self.async_show_form(step_id="reconfigure", data_schema=schema)
 
         reconnect = bool(user_input.pop(CONF_RECONNECT, False))
+        previous_mode = str(subentry.data.get(CONF_TRANSACTION_STORAGE, DEFAULT_TRANSACTION_STORAGE))
         if not _valid_refresh_window(user_input):
             return self.async_show_form(
                 step_id="reconfigure",
@@ -217,6 +233,30 @@ class OpenBankingInstitutionSubentryFlow(config_entries.ConfigSubentryFlow):
                 errors={"base": "invalid_refresh_window"},
             )
         self._data.update(user_input)
+        self._pending_reconnect = reconnect
+        if (
+            user_input.get(CONF_TRANSACTION_STORAGE, DEFAULT_TRANSACTION_STORAGE) == TRANSACTION_STORAGE_ENCRYPTED
+            and previous_mode != TRANSACTION_STORAGE_ENCRYPTED
+        ):
+            self._warning_next_step = "reconfigure"
+            return await self.async_step_transaction_storage_warning()
+        return await self._async_finish_reconfigure()
+
+    async def async_step_transaction_storage_warning(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.SubentryFlowResult:
+        """Confirm encrypted local transaction persistence."""
+        if user_input is None:
+            return self.async_show_form(step_id="transaction_storage_warning", data_schema=vol.Schema({}))
+        if self._warning_next_step == "institution":
+            return await self.async_step_institution()
+        return await self._async_finish_reconfigure()
+
+    async def _async_finish_reconfigure(self) -> config_entries.SubentryFlowResult:
+        """Apply reconfiguration or reconnect authorization."""
+        subentry = self._get_reconfigure_subentry()
+        reconnect = self._pending_reconnect
         if not reconnect:
             title = f"{self._data[CONF_ACCOUNT_HOLDER]} — {self._data[CONF_INSTITUTION_NAME]}"
             return self.async_update_reload_and_abort(
@@ -298,6 +338,10 @@ def connection_schema(
             CONF_BALANCE_TYPES,
             default=values.get(CONF_BALANCE_TYPES, DEFAULT_BALANCE_TYPES),
         ): cv.multi_select(BALANCE_TYPES),
+        vol.Required(
+            CONF_TRANSACTION_STORAGE,
+            default=values.get(CONF_TRANSACTION_STORAGE, DEFAULT_TRANSACTION_STORAGE),
+        ): vol.In(TRANSACTION_STORAGE_MODES),
     }
     if include_reconnect:
         schema[vol.Optional(CONF_RECONNECT, default=False)] = cv.boolean
