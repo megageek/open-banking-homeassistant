@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.1](https://github.com/megageek/open-banking-homeassistant/compare/v0.6.0...v0.6.1) (2026-07-18)
+
+
+### Features
+
+* **transactions:** add pending period sensors ([e303c36](https://github.com/megageek/open-banking-homeassistant/commit/e303c360b53130b152fd930b755807b04b76b0da))
+* **transactions:** add tiered transaction support ([f695dbd](https://github.com/megageek/open-banking-homeassistant/commit/f695dbd6c096b91d0d17e2eeafa2951ec65e24cb))
+* **transactions:** add transaction update triggers ([6e9c8ea](https://github.com/megageek/open-banking-homeassistant/commit/6e9c8eae40c8c4163c1e749b6fa9e872fd4fb252))
+
+
+### Bug Fixes
+
+* **transactions:** clean up stale summary entities ([7c33cf8](https://github.com/megageek/open-banking-homeassistant/commit/7c33cf86e90678fc40c392d18836385eac5a2e51))
+
 ## [0.6.0](https://github.com/megageek/open-banking-homeassistant/releases/tag/v0.6.0) (2026-07-18)
 
 ### Breaking changes
