@@ -76,3 +76,22 @@ def test_pending_summary_periods(kind: str, expected: Decimal) -> None:
 def test_pending_summary_unique_ids_are_stable(kind: str) -> None:
     """Each pending summary uses its translation key in the unique ID."""
     assert _sensor(kind, []).unique_id == f"{ACCOUNT_ID}-transaction-{kind}"
+
+
+def test_summary_schedules_and_recalculates_at_local_midnight(hass) -> None:
+    """The midnight callback writes state and schedules the following rollover."""
+    sensor = _sensor("spending_today", [])
+    sensor.hass = hass
+    sensor.async_on_remove = MagicMock()
+    sensor.async_write_ha_state = MagicMock()
+
+    with (
+        patch("custom_components.open_banking.sensor.transaction_summary.dt_util.now", return_value=NOW),
+        patch("custom_components.open_banking.sensor.transaction_summary.async_track_point_in_time") as track,
+    ):
+        sensor._schedule_midnight()  # noqa: SLF001
+        callback = track.call_args.args[1]
+        callback(NOW)
+
+    sensor.async_write_ha_state.assert_called_once()
+    assert track.call_count == 2

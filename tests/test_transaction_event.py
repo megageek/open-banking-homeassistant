@@ -90,3 +90,32 @@ def test_event_entity_emits_each_change_sequence_once() -> None:
     assert entity.async_write_ha_state.call_count == 1
     assert "account-secret-id" not in str(entity.state_attributes)
     assert "GBP" not in str(entity.state_attributes)
+
+
+async def test_native_trigger_attachment_runs_only_for_matching_changes(hass) -> None:
+    """Attached native triggers target an entity and filter its change counts."""
+    entity_id = "event.account_transaction_updates"
+    config = MagicMock(options=None, target={"entity_id": entity_id})
+    trigger = OpenBankingNewBookedTransactionsTrigger(hass, config)
+    run_action = MagicMock()
+    remove = await trigger.async_attach_runner(run_action)
+    hass.states.async_set(entity_id, "2026-07-18T12:00:00+00:00", _attributes())
+    await hass.async_block_till_done()
+
+    hass.states.async_set(
+        entity_id,
+        "2026-07-18T12:01:00+00:00",
+        _attributes(pending_added_count=1),
+    )
+    await hass.async_block_till_done()
+    run_action.assert_not_called()
+
+    hass.states.async_set(
+        entity_id,
+        "2026-07-18T12:02:00+00:00",
+        _attributes(booked_added_count=1),
+    )
+    await hass.async_block_till_done()
+    run_action.assert_called_once()
+    assert run_action.call_args.args[0]["entity_id"] == entity_id
+    remove()

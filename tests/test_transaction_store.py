@@ -112,3 +112,18 @@ async def test_coordinator_restores_encrypted_cache_and_deletes_it_for_memory(ha
     subentry.data = {CONF_TRANSACTION_STORAGE: TRANSACTION_STORAGE_MEMORY}
     await coordinator.async_restore_transactions()
     transaction_store.async_delete.assert_awaited_once_with("bank")
+
+
+async def test_public_load_discards_tampered_ciphertext(hass) -> None:
+    """Authentication failure through public loading deletes the unreadable cache."""
+    store = OpenBankingTransactionStore(hass, "entry", "secret")
+    store._data = {"salt": "MDEyMzQ1Njc4OWFiY2RlZg==", "entries": {}}  # noqa: SLF001
+    blob = store._encrypt("bank", {"account": {}})  # noqa: SLF001
+    ciphertext = str(blob["ciphertext"])
+    blob["ciphertext"] = ("A" if ciphertext[0] != "A" else "B") + ciphertext[1:]
+    store._data["entries"]["bank"] = blob  # noqa: SLF001
+    store._store.async_save = AsyncMock()  # noqa: SLF001
+
+    assert await store.async_load("bank") == {}
+    assert store._data["entries"] == {}  # noqa: SLF001
+    store._store.async_save.assert_awaited_once()  # noqa: SLF001

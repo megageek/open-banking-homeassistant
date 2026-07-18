@@ -173,7 +173,9 @@ def _async_cleanup_registry(
                 ),
                 None,
             )
-            if transaction_key is not None and coordinator.transaction_mode == TRANSACTION_STORAGE_DISABLED:
+            if transaction_key is not None and (
+                coordinator.transaction_mode == TRANSACTION_STORAGE_DISABLED or account_id in expired_accounts
+            ):
                 entity_registry.async_remove(entity_entry.entity_id)
                 removed = True
             continue

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from custom_components.open_banking.const import TRANSACTION_MAX_RECORDS
 from custom_components.open_banking.coordinator.transactions import (
     normalize_transaction,
     transaction_change,
@@ -54,6 +55,20 @@ def test_cache_prunes_records_outside_retention() -> None:
     cache = update_account_cache({"booked": [_raw("current", 89), _raw("expired", 90)], "pending": []})
 
     assert [item["id"] for item in cache["booked"]] == ["current"]
+
+
+def test_cache_retains_only_newest_five_thousand_records() -> None:
+    """Oversized responses are ordered, bounded, and marked truncated."""
+    booked = [
+        _raw(str(index), index % 90) | {"bookingDateTime": f"2026-07-18T12:{index % 60:02d}:00Z"}
+        for index in range(TRANSACTION_MAX_RECORDS + 1)
+    ]
+
+    cache = update_account_cache({"booked": booked, "pending": []})
+
+    assert len(cache["booked"]) == TRANSACTION_MAX_RECORDS
+    assert cache["truncated"] is True
+    assert cache["booked"] == sorted(cache["booked"], key=lambda item: (item["booking_date"], item["id"]), reverse=True)
 
 
 def test_initial_transaction_change_has_sanitized_zero_counts() -> None:
