@@ -66,9 +66,14 @@ configuration and its credentials. Changing credentials may invalidate the
 cache; the integration then discards and rebuilds it safely.
 
 When enabled, each account provides spending today, income today, spending this
-month, income this month, and pending outgoing sensors. Home Assistant Recorder
-may store these sensor states in either enabled mode. Responses from transaction
-actions may also be retained in automation or script traces.
+month, income this month, pending outgoing, pending outgoing today, and pending
+outgoing this month sensors. "Today" follows Home Assistant's local calendar
+date. "This month" is calendar month-to-date and includes today. Pending
+transactions without a booking or value date are included only in the overall
+pending outgoing sensor because they cannot be assigned reliably to a calendar
+period. Home Assistant Recorder may store these sensor states in either enabled
+mode. Responses from transaction actions may also be retained in automation or
+script traces.
 
 Transactions refresh on the bank connection's normal schedule and use a
 separate bank API quota. Up to 90 days and 5,000 records per account are kept.

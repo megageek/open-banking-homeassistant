@@ -21,6 +21,8 @@ TRANSACTION_SUMMARY_KINDS = (
     "spending_this_month",
     "income_this_month",
     "pending_outgoing",
+    "pending_outgoing_today",
+    "pending_outgoing_this_month",
 )
 
 
@@ -85,7 +87,8 @@ class OpenBankingTransactionSummarySensor(OpenBankingEntity, SensorEntity):
         cache = self.coordinator.transactions.get(self._account_id, {})
         today = dt_util.now().date()
         total = Decimal(0)
-        status = "pending" if self._kind == "pending_outgoing" else "booked"
+        is_pending = self._kind.startswith("pending_outgoing")
+        status = "pending" if is_pending else "booked"
         for transaction in cache.get(status, []):
             if transaction.get("currency") != self._currency:
                 continue
@@ -95,7 +98,7 @@ class OpenBankingTransactionSummarySensor(OpenBankingEntity, SensorEntity):
                 continue
             if self._kind != "pending_outgoing" and (item_date is None or not self._includes_date(item_date, today)):
                 continue
-            if "spending" in self._kind or self._kind == "pending_outgoing":
+            if "spending" in self._kind or is_pending:
                 if amount < 0:
                     total += -amount
             elif amount > 0:

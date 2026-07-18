@@ -184,7 +184,9 @@
       "income_today": {"name": "Income today"},
       "spending_this_month": {"name": "Spending this month"},
       "income_this_month": {"name": "Income this month"},
-      "pending_outgoing": {"name": "Pending outgoing"}
+      "pending_outgoing": {"name": "Pending outgoing"},
+      "pending_outgoing_today": {"name": "Pending outgoing today"},
+      "pending_outgoing_this_month": {"name": "Pending outgoing this month"}
     }
   },
   "services": {
