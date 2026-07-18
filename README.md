@@ -7,7 +7,7 @@ This is an independent, community-developed integration and is not affiliated
 with or endorsed by GoCardless. GoCardless is a trademark of GoCardless Ltd.
 
 > [!WARNING]
-> Version 0.5.0 changes the integration domain from `nordigen` to `open_banking`.
+> Version 0.6.0 changes the integration domain from `nordigen` to `open_banking`.
 > Remove the old integration and YAML configuration before installing this release.
 
 ## Features
@@ -65,7 +65,7 @@ The domain change cannot be migrated automatically by Home Assistant:
 
 1. Remove the old Nordigen integration and its YAML configuration.
 2. Remove any remaining `custom_components/nordigen` directory.
-3. Install version 0.5.0 and restart Home Assistant.
+3. Install version 0.6.0 and restart Home Assistant.
 4. Add **Open Banking via GoCardless** through the UI and reconnect each bank.
 5. Update automations and dashboards to use the newly created entity IDs.
 
