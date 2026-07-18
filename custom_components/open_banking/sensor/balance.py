@@ -51,7 +51,11 @@ class OpenBankingBalanceSensor(OpenBankingEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return whether the connection remains linked and data is current."""
-        return super().available and (self.coordinator.data.get("requisition", {}).get("status") == REQUISITION_LINKED)
+        return (
+            super().available
+            and self.coordinator.data.get("requisition", {}).get("status") == REQUISITION_LINKED
+            and self._balance() is not None
+        )
 
     @property
     def native_value(self) -> Decimal | None:

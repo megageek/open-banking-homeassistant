@@ -5,10 +5,19 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.open_banking import async_setup, async_setup_entry, async_unload_entry
+from custom_components.open_banking import async_migrate_entry, async_setup, async_setup_entry, async_unload_entry
 from custom_components.open_banking.api import OpenBankingAuthenticationError
-from custom_components.open_banking.const import CONF_SECRET_ID, CONF_SECRET_KEY, DOMAIN
+from custom_components.open_banking.const import (
+    CONF_REFRESH_INTERVAL,
+    CONF_REFRESH_WINDOW_END,
+    CONF_REFRESH_WINDOW_START,
+    CONF_REFRESHES_PER_DAY,
+    CONF_SECRET_ID,
+    CONF_SECRET_KEY,
+    DOMAIN,
+)
 from homeassistant.const import Platform
 from homeassistant.exceptions import ConfigEntryAuthFailed
 
@@ -62,7 +71,7 @@ async def test_setup_entry_restores_and_persists_subentry_snapshot(hass) -> None
             type(self).created_with = (stored_hass, version, key)
 
         async def async_load(self) -> dict:
-            return {"bank-1": {"data": "restored"}}
+            return {"bank-1": {"data": "restored"}, "removed-bank": {"data": "stale"}}
 
         async def async_save(self, data: dict) -> None:
             type(self).saved = data
@@ -86,6 +95,7 @@ async def test_setup_entry_restores_and_persists_subentry_snapshot(hass) -> None
         await async_setup_entry(hass, entry)
 
     assert FakeStore.created_with == (hass, 1, f"{DOMAIN}.entry-1")
+    assert FakeStore.saved == {"bank-1": {"data": "restored"}}
     coordinator.async_restore_snapshot.assert_called_once_with({"data": "restored"})
     save_snapshot = create.call_args.args[4]
     await save_snapshot({"data": "updated"})
@@ -132,3 +142,65 @@ async def test_failed_platform_unload_keeps_coordinators_running(hass) -> None:
 
     assert await async_unload_entry(hass, entry) is False
     coordinator.async_shutdown.assert_not_awaited()
+
+
+async def test_migrate_legacy_refresh_interval_to_current_defaults(hass) -> None:
+    """Version 1 bank connections adopt the current daily schedule defaults."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        minor_version=1,
+        subentries_data=[
+            {
+                "data": {CONF_REFRESH_INTERVAL: 120, "institution_id": "BANK"},
+                "subentry_type": "institution",
+                "title": "Bank",
+                "unique_id": "req-1",
+            }
+        ],
+    )
+    entry.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, entry) is True
+
+    subentry = next(iter(entry.subentries.values()))
+    assert CONF_REFRESH_INTERVAL not in subentry.data
+    assert subentry.data[CONF_REFRESHES_PER_DAY] == 4
+    assert subentry.data[CONF_REFRESH_WINDOW_START] == "07:00:00"
+    assert subentry.data[CONF_REFRESH_WINDOW_END] == "22:00:00"
+    assert subentry.data["institution_id"] == "BANK"
+    assert entry.minor_version == 2
+
+
+async def test_migration_preserves_current_schedule_and_is_idempotent(hass) -> None:
+    """Current-format data is not overwritten by repeated migration calls."""
+    schedule = {
+        CONF_REFRESHES_PER_DAY: 8,
+        CONF_REFRESH_WINDOW_START: "06:00:00",
+        CONF_REFRESH_WINDOW_END: "18:00:00",
+    }
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        minor_version=1,
+        subentries_data=[
+            {
+                "data": schedule,
+                "subentry_type": "institution",
+                "title": "Bank",
+                "unique_id": "req-1",
+            }
+        ],
+    )
+    entry.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, entry) is True
+    assert dict(next(iter(entry.subentries.values())).data) == schedule
+    assert await async_migrate_entry(hass, entry) is True
+    assert entry.minor_version == 2
+
+
+async def test_migration_rejects_future_major_version(hass) -> None:
+    """Downgrades from an unsupported future schema fail safely."""
+    entry = MockConfigEntry(domain=DOMAIN, version=2)
+    entry.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, entry) is False

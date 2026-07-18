@@ -54,6 +54,7 @@ class OpenBankingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Configure GoCardless API credentials."""
 
     VERSION = 1
+    MINOR_VERSION = 2
 
     def __init__(self) -> None:
         """Initialize transient initial-connection state."""

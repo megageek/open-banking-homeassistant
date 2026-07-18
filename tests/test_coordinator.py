@@ -63,7 +63,8 @@ async def test_coordinator_does_not_load_unlinked_accounts(hass) -> None:
 
     data = await coordinator._async_update_data()  # noqa: SLF001
 
-    assert data == {"requisition": {"status": "UA", "accounts": ["account-1"]}, "accounts": {}}
+    assert data["requisition"] == {"status": "UA", "accounts": ["account-1"]}
+    assert data["accounts"] == {}
     client.async_get_account_details.assert_not_awaited()
 
 
@@ -258,8 +259,54 @@ def test_quota_uses_most_restrictive_limit_and_exhaustion(hass) -> None:
     coordinator._update_quota({"account-1": {}})  # noqa: SLF001
 
     assert coordinator._quota_limit == 4  # noqa: SLF001
+    assert coordinator._quota_remaining == 0  # noqa: SLF001
     assert coordinator._quota_blocked_until is not None  # noqa: SLF001
     assert coordinator._quota_blocked_until >= before + timedelta(seconds=300)  # noqa: SLF001
+
+
+def test_missing_entities_expire_after_three_successful_refreshes(hass) -> None:
+    """Accounts and balances cross the cleanup threshold after three absences."""
+    coordinator = _coordinator(hass, MagicMock())
+    account = {"balances": [{"balanceType": "interimAvailable"}]}
+    coordinator._update_missing_entities({"account-1": account})  # noqa: SLF001
+
+    coordinator._update_missing_entities({})  # noqa: SLF001
+    coordinator._update_missing_entities({})  # noqa: SLF001
+    assert coordinator.expired_accounts == set()
+
+    coordinator._update_missing_entities({})  # noqa: SLF001
+    assert coordinator.expired_accounts == {"account-1"}
+    assert coordinator.known_accounts == set()
+
+
+def test_missing_entity_grace_resets_when_data_returns(hass) -> None:
+    """A returning balance keeps its identity and clears its absence counter."""
+    coordinator = _coordinator(hass, MagicMock())
+    account = {"balances": [{"balanceType": "interimAvailable"}]}
+    coordinator._update_missing_entities({"account-1": account})  # noqa: SLF001
+    coordinator._update_missing_entities({"account-1": {"balances": []}})  # noqa: SLF001
+    coordinator._update_missing_entities({"account-1": account})  # noqa: SLF001
+
+    assert coordinator.expired_balances == set()
+    assert coordinator._missing_balances == {}  # noqa: SLF001
+
+
+def test_missing_entity_counters_restore_from_snapshot(hass) -> None:
+    """Cleanup grace state survives a Home Assistant restart."""
+    coordinator = _coordinator(hass, MagicMock())
+    coordinator.async_restore_snapshot(
+        {
+            "requisition_id": "req-1",
+            "known_accounts": ["account-1"],
+            "known_balances": [["account-1", "expected"]],
+            "missing_accounts": {"account-1": 2},
+            "missing_balances": [["account-1", "expected", 1]],
+        }
+    )
+
+    assert coordinator.known_accounts == {"account-1"}
+    assert coordinator.known_balances == {("account-1", "expected")}
+    assert coordinator._missing_accounts == {"account-1": 2}  # noqa: SLF001
 
 
 def test_next_refresh_respects_active_window_and_quota(monkeypatch, hass) -> None:

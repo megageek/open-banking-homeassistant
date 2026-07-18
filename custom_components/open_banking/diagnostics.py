@@ -35,9 +35,7 @@ async def async_get_config_entry_diagnostics(
             "coordinators": {
                 key: {
                     **coordinator.data,
-                    "requisition_expires_at": (
-                        coordinator.requisition_expires_at.isoformat() if coordinator.requisition_expires_at else None
-                    ),
+                    "operational": coordinator.diagnostics(),
                 }
                 for key, coordinator in entry.runtime_data.coordinators.items()
             },

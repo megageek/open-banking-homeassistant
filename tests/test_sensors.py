@@ -30,6 +30,7 @@ def test_balance_sensor_uses_decimal_and_api_currency() -> None:
         "account",
         "interimAvailable",
         coordinator.data["accounts"]["account"],
+        "Current account",
         ("open_banking", "institution"),
     )
 
@@ -41,7 +42,7 @@ def test_balance_sensor_handles_missing_and_invalid_data() -> None:
     """Malformed or missing balances do not raise from entity properties."""
     coordinator = MagicMock()
     coordinator.data = {"requisition": {"status": "UA"}, "accounts": {"account": {"balances": []}}}
-    sensor = OpenBankingBalanceSensor(coordinator, "account", "expected", {}, ("open_banking", "bank"))
+    sensor = OpenBankingBalanceSensor(coordinator, "account", "expected", {}, "Account", ("open_banking", "bank"))
 
     assert sensor.native_value is None
     assert sensor.native_unit_of_measurement is None
