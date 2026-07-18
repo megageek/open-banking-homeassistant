@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from custom_components.open_banking.coordinator.transactions import normalize_transaction, update_account_cache
+from custom_components.open_banking.coordinator.transactions import (
+    normalize_transaction,
+    transaction_change,
+    update_account_cache,
+)
 from homeassistant.util import dt as dt_util
 
 
@@ -50,3 +54,62 @@ def test_cache_prunes_records_outside_retention() -> None:
     cache = update_account_cache({"booked": [_raw("current", 89), _raw("expired", 90)], "pending": []})
 
     assert [item["id"] for item in cache["booked"]] == ["current"]
+
+
+def test_initial_transaction_change_has_sanitized_zero_counts() -> None:
+    """Initial history is visible without being reported as newly observed."""
+    cache = update_account_cache({"booked": [_raw("existing", 0)], "pending": []})
+
+    change = transaction_change(None, cache, "GBP")
+
+    assert change == {
+        "cache_updated_at": cache["updated_at"],
+        "initial_population": True,
+        "booked_added_count": 0,
+        "booked_updated_count": 0,
+        "booked_removed_count": 0,
+        "pending_added_count": 0,
+        "pending_updated_count": 0,
+        "pending_removed_count": 0,
+        "currency_mismatch_count": 0,
+    }
+    assert "existing" not in str(change)
+    assert "amount" not in str(change)
+
+
+def test_transaction_change_counts_meaningful_cache_differences() -> None:
+    """Change metadata distinguishes additions, updates, removals, and mismatches."""
+    previous = update_account_cache(
+        {
+            "booked": [_raw("booked-updated", 1), _raw("booked-removed", 1)],
+            "pending": [_raw("pending-updated", 0), _raw("pending-removed", 0)],
+        }
+    )
+    current = update_account_cache(
+        {
+            "booked": [_raw("booked-updated", 1, "-12"), _raw("booked-added", 0)],
+            "pending": [
+                _raw("pending-updated", 0, "-13"),
+                _raw("pending-added", 0) | {"transactionAmount": {"amount": "-10", "currency": "EUR"}},
+            ],
+        }
+    )
+
+    change = transaction_change(previous, current, "GBP")
+
+    assert change is not None
+    assert change["booked_added_count"] == 1
+    assert change["booked_updated_count"] == 1
+    assert change["booked_removed_count"] == 1
+    assert change["pending_added_count"] == 1
+    assert change["pending_updated_count"] == 1
+    assert change["pending_removed_count"] == 1
+    assert change["currency_mismatch_count"] == 1
+
+
+def test_transaction_change_ignores_timestamp_and_raw_payload_only_changes() -> None:
+    """Refresh timestamps and bank-specific raw differences do not emit updates."""
+    previous = update_account_cache({"booked": [_raw("same", 0)], "pending": []})
+    current = update_account_cache({"booked": [_raw("same", 0) | {"extraBankField": "changed"}], "pending": []})
+
+    assert transaction_change(previous, current, "GBP") is None

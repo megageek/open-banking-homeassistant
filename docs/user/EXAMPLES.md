@@ -46,3 +46,27 @@ response_variable: recent_transactions
 Set `include_raw: true` only when the normalized fields are insufficient. Raw
 bank objects vary between institutions, may be large and cryptic, contain
 sensitive information, and may be retained in automation traces.
+
+## React to transaction updates
+
+The automation editor offers native Open Banking triggers for transaction
+updates, new booked transactions, and pending changes. Trigger variables contain
+only timestamps and aggregate change counts. Call the cached transaction action
+when the automation explicitly needs transaction details:
+
+```yaml
+triggers:
+  - trigger: open_banking.new_booked_transactions
+    target:
+      entity_id: event.main_account_transaction_updates
+actions:
+  - action: open_banking.get_transactions
+    data:
+      device_id: ACCOUNT_DEVICE_ID
+      status: booked
+      limit: 20
+    response_variable: recent_booked_transactions
+```
+
+The first cache population fires only the general transaction-updated trigger.
+It does not fire the new-booked or pending-change triggers for retained history.

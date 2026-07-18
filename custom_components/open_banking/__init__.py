@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
     from .data import OpenBankingConfigEntry
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.EVENT, Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 STORAGE_VERSION = 1
 

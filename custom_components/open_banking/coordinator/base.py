@@ -42,7 +42,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .transaction_store import OpenBankingTransactionStore
-from .transactions import TransactionCache, update_account_cache
+from .transactions import TransactionCache, TransactionChange, transaction_change, update_account_cache
 
 type SaveSnapshot = Callable[[dict[str, Any]], Awaitable[None]]
 
@@ -70,6 +70,8 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._save_snapshot = save_snapshot or _async_noop_save
         self._transaction_store = transaction_store
         self._transactions: TransactionCache = {}
+        self._transaction_changes: dict[str, TransactionChange] = {}
+        self._transaction_change_sequences: dict[str, int] = {}
         self._transaction_last_error_category: str | None = None
         self._transaction_last_error_at: datetime | None = None
         self._transaction_blocked_until: datetime | None = None
@@ -144,6 +146,13 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def transactions(self) -> TransactionCache:
         """Return the in-memory transaction cache."""
         return self._transactions
+
+    def transaction_change_for_account(self, account_id: str) -> tuple[int, TransactionChange] | None:
+        """Return the latest sanitized transaction change and its sequence."""
+        change = self._transaction_changes.get(account_id)
+        if change is None:
+            return None
+        return self._transaction_change_sequences.get(account_id, 0), change
 
     async def async_restore_transactions(self) -> None:
         """Restore or remove persistent transactions for this connection."""
@@ -222,7 +231,10 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         "details": details_response.get("account", {}),
                         "balances": balances_response.get("balances", []),
                     }
-                    await self._async_update_transactions(account_id)
+                    await self._async_update_transactions(
+                        account_id,
+                        str(details_response.get("account", {}).get("currency") or ""),
+                    )
         except OpenBankingAuthenticationError as err:
             await self._async_record_failure("authentication_failed")
             raise ConfigEntryAuthFailed(
@@ -270,10 +282,12 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._transaction_store.async_save(self.subentry.subentry_id, self._transactions)
             return data
 
-    async def _async_update_transactions(self, account_id: str) -> None:
+    async def _async_update_transactions(self, account_id: str, account_currency: str) -> None:
         """Best-effort update one account's transaction cache."""
         if self.transaction_mode == TRANSACTION_STORAGE_DISABLED:
             self._transactions.clear()
+            self._transaction_changes.clear()
+            self._transaction_change_sequences.clear()
             return
         if self._transaction_blocked_until is not None and dt_util.utcnow() < self._transaction_blocked_until:
             return
@@ -290,7 +304,15 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._transaction_last_error_category = "update_failed"
             self._transaction_last_error_at = dt_util.utcnow()
         else:
-            self._transactions[account_id] = update_account_cache(payload, self._transactions.get(account_id))
+            previous = self._transactions.get(account_id)
+            current = update_account_cache(payload, previous)
+            change = transaction_change(previous, current, account_currency)
+            self._transactions[account_id] = current
+            if change is not None:
+                self._transaction_changes[account_id] = change
+                self._transaction_change_sequences[account_id] = (
+                    self._transaction_change_sequences.get(account_id, 0) + 1
+                )
             self._transaction_blocked_until = None
 
     async def _async_record_failure(self, category: str) -> None:

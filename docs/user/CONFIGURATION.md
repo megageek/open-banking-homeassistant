@@ -78,6 +78,25 @@ script traces.
 Transactions refresh on the bank connection's normal schedule and use a
 separate bank API quota. Up to 90 days and 5,000 records per account are kept.
 
+Each transaction-enabled account also has a **Transaction updates** event
+entity. It emits `transactions_updated` when the cached transaction contents
+change. The first successful fetch without an existing cache emits an initial
+update, but its added, updated, and removed counts are all zero so retained
+history is not presented as newly observed activity. Identical refreshes and
+failed transaction requests emit nothing.
+
+The event exposes only its cache timestamp, whether it is the initial
+population, aggregate booked and pending change counts, and a
+currency-mismatch count. It never includes account identifiers, transaction
+identifiers, dates, currencies, amounts, descriptions, counterparties, or raw
+bank data.
+
+Home Assistant's automation editor provides native triggers for any transaction
+update, newly booked transactions, and pending transaction changes. The generic
+**Event received** trigger can also target the event entity. To use transaction
+details in an automation, call `open_banking.get_transactions` after the trigger;
+this keeps sensitive financial data out of event states and trigger variables.
+
 ## External URL
 
 Bank authorization requires a Home Assistant external URL. Configure this in

@@ -54,7 +54,7 @@ async def test_setup_entry_authenticates_refreshes_and_forwards_platforms(hass) 
     client.async_authenticate.assert_awaited_once()
     coordinator.async_config_entry_first_refresh.assert_awaited_once()
     assert entry.runtime_data.coordinators == {"bank-1": coordinator}
-    hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(entry, [Platform.SENSOR])
+    hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(entry, [Platform.EVENT, Platform.SENSOR])
 
 
 async def test_setup_entry_restores_and_persists_subentry_snapshot(hass) -> None:
@@ -131,7 +131,7 @@ async def test_unload_entry_stops_coordinators_after_platform_unload(hass) -> No
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
 
     assert await async_unload_entry(hass, entry) is True
-    hass.config_entries.async_unload_platforms.assert_awaited_once_with(entry, [Platform.SENSOR])
+    hass.config_entries.async_unload_platforms.assert_awaited_once_with(entry, [Platform.EVENT, Platform.SENSOR])
     first.async_shutdown.assert_awaited_once()
     second.async_shutdown.assert_awaited_once()
 

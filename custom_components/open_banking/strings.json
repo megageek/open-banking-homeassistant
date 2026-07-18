@@ -156,6 +156,18 @@
     }
   },
   "entity": {
+    "event": {
+      "transaction_updates": {
+        "name": "Transaction updates",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "transactions_updated": "Transactions updated"
+            }
+          }
+        }
+      }
+    },
     "sensor": {
       "balance": {
         "name": "{balance_type} balance"
@@ -187,6 +199,20 @@
       "pending_outgoing": {"name": "Pending outgoing"},
       "pending_outgoing_today": {"name": "Pending outgoing today"},
       "pending_outgoing_this_month": {"name": "Pending outgoing this month"}
+    }
+  },
+  "triggers": {
+    "transactions_updated": {
+      "name": "Bank account transactions updated",
+      "description": "Triggers when cached transactions for a bank account change."
+    },
+    "new_booked_transactions": {
+      "name": "Bank account received new booked transactions",
+      "description": "Triggers when new booked transactions are observed for a bank account."
+    },
+    "pending_transactions_changed": {
+      "name": "Bank account pending transactions changed",
+      "description": "Triggers when pending transactions are added, updated, or removed."
     }
   },
   "services": {

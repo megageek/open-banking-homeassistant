@@ -12,6 +12,7 @@ from custom_components.open_banking.const import TRANSACTION_MAX_RECORDS, TRANSA
 from homeassistant.util import dt as dt_util
 
 type TransactionCache = dict[str, dict[str, Any]]
+type TransactionChange = dict[str, int | bool | str | None]
 
 
 def update_account_cache(payload: dict[str, Any], existing: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -103,6 +104,45 @@ def transaction_amount(transaction: dict[str, Any]) -> Decimal | None:
         return None
 
 
+def transaction_change(
+    previous: dict[str, Any] | None,
+    current: dict[str, Any],
+    account_currency: str,
+) -> TransactionChange | None:
+    """Return sanitized change metadata, or None when cache contents match."""
+    initial_population = previous is None
+    fields: TransactionChange = {
+        "cache_updated_at": current.get("updated_at"),
+        "initial_population": initial_population,
+        "booked_added_count": 0,
+        "booked_updated_count": 0,
+        "booked_removed_count": 0,
+        "pending_added_count": 0,
+        "pending_updated_count": 0,
+        "pending_removed_count": 0,
+        "currency_mismatch_count": _currency_mismatch_count(current, account_currency),
+    }
+    if initial_population:
+        return fields
+
+    changed = False
+    for status in ("booked", "pending"):
+        old_by_id = _by_id(previous.get(status, []))
+        new_by_id = _by_id(current.get(status, []))
+        added = new_by_id.keys() - old_by_id.keys()
+        removed = old_by_id.keys() - new_by_id.keys()
+        updated = {
+            transaction_id
+            for transaction_id in old_by_id.keys() & new_by_id.keys()
+            if _comparable(old_by_id[transaction_id]) != _comparable(new_by_id[transaction_id])
+        }
+        fields[f"{status}_added_count"] = len(added)
+        fields[f"{status}_updated_count"] = len(updated)
+        fields[f"{status}_removed_count"] = len(removed)
+        changed |= bool(added or updated or removed)
+    return fields if changed else None
+
+
 def _normalize_many(items: Any, status: str, cutoff: date) -> list[dict[str, Any]]:
     if not isinstance(items, list):
         return []
@@ -125,3 +165,24 @@ def _within_retention(transaction: dict[str, Any], cutoff: date) -> bool:
 def _date_value(raw: dict[str, Any], date_key: str, datetime_key: str) -> str | None:
     value = raw.get(date_key) or raw.get(datetime_key)
     return str(value)[:10] if value else None
+
+
+def _by_id(items: Any) -> dict[str, dict[str, Any]]:
+    return (
+        {str(item["id"]): item for item in items if isinstance(item, dict) and isinstance(item.get("id"), str)}
+        if isinstance(items, list)
+        else {}
+    )
+
+
+def _comparable(transaction: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in transaction.items() if key not in {"id", "raw"}}
+
+
+def _currency_mismatch_count(cache: dict[str, Any], account_currency: str) -> int:
+    return sum(
+        transaction.get("currency") != account_currency
+        for status in ("booked", "pending")
+        for transaction in cache.get(status, [])
+        if isinstance(transaction, dict)
+    )
