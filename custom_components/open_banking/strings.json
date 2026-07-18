@@ -33,14 +33,14 @@
           "refreshes_per_day": "Refreshes per day",
           "refresh_window_start": "Active window starts",
           "refresh_window_end": "Active window ends",
-          "transaction_storage": "Transaction storage"
+          "transaction_storage": "Transaction history storage"
         },
         "data_description": {
           "account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.",
           "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.",
           "country": "The country in which your bank account is held.",
           "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance.",
-          "transaction_storage": "Disabled makes no transaction requests. Memory only keeps a 90-day cache until restart. Encrypted persistent stores the cache in Home Assistant storage; summary states may still be recorded in all enabled modes."
+          "transaction_storage": "Choose whether transaction history is retrieved and how its 90-day cache is stored. Disabled does not request transactions. Memory only loses the cache when Home Assistant restarts. Encrypted persistent saves an encrypted cache in Home Assistant’s .storage directory. Home Assistant may still record summary sensor states and automation traces in either enabled mode."
         }
       },
       "institution": {
@@ -57,7 +57,7 @@
         "title": "Finishing bank connection"
       },
       "transaction_storage_warning": {
-        "title": "Store transaction history",
+        "title": "Confirm encrypted transaction storage",
         "description": "Sensitive transaction details will be encrypted and stored in Home Assistant’s local .storage directory. Encryption makes the cache alone difficult to read, but it does not protect against someone who obtains the complete Home Assistant configuration, which also contains the credential used to derive the encryption key."
       },
       "reauth_confirm": {
@@ -88,7 +88,7 @@
         "authorization_incomplete": "The bank connection was not authorized.",
         "cannot_connect": "Unable to verify the bank connection.",
         "invalid_callback": "The authorization callback was invalid or expired.",
-        "reconfigure_successful": "The bank connection was updated successfully."
+        "reconfigure_successful": "**Bank connection updated**\n\nThe bank connection settings were updated successfully."
       },
       "error": {
         "cannot_connect": "Unable to connect to GoCardless.",
@@ -105,14 +105,14 @@
             "refreshes_per_day": "Refreshes per day",
             "refresh_window_start": "Active window starts",
             "refresh_window_end": "Active window ends",
-            "transaction_storage": "Transaction storage"
+            "transaction_storage": "Transaction history storage"
           },
           "data_description": {
             "account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.",
             "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.",
             "country": "The country in which your bank account is held.",
             "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance.",
-            "transaction_storage": "Disabled makes no transaction requests. Memory only keeps a 90-day cache until restart. Encrypted persistent stores the cache in Home Assistant storage; summary states may still be recorded in all enabled modes."
+            "transaction_storage": "Choose whether transaction history is retrieved and how its 90-day cache is stored. Disabled does not request transactions. Memory only loses the cache when Home Assistant restarts. Encrypted persistent saves an encrypted cache in Home Assistant’s .storage directory. Home Assistant may still record summary sensor states and automation traces in either enabled mode."
           }
         },
         "institution": {
@@ -129,8 +129,8 @@
           "title": "Finishing bank connection"
         },
         "transaction_storage_warning": {
-          "title": "Store transaction history",
-          "description": "Sensitive transaction details will be encrypted and stored in Home Assistant’s local .storage directory. Encryption makes the cache alone difficult to read, but it does not protect against someone who obtains the complete Home Assistant configuration."
+          "title": "Confirm encrypted transaction storage",
+          "description": "Sensitive transaction details will be encrypted and stored in Home Assistant’s local .storage directory. Encryption makes the cache alone difficult to read, but it does not protect against someone who obtains the complete Home Assistant configuration, which also contains the credential used to derive the encryption key."
         },
         "reconfigure": {
           "title": "Update bank connection",
@@ -142,14 +142,14 @@
             "refreshes_per_day": "Refreshes per day",
             "refresh_window_start": "Active window starts",
             "refresh_window_end": "Active window ends",
-            "transaction_storage": "Transaction storage"
+            "transaction_storage": "Transaction history storage"
           },
           "data_description": {
             "account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.",
             "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.",
             "country": "The country in which your bank account is held.",
             "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance.",
-            "transaction_storage": "Disabled makes no transaction requests. Memory only keeps a 90-day cache until restart. Encrypted persistent stores the cache in Home Assistant storage; summary states may still be recorded in all enabled modes."
+            "transaction_storage": "Choose whether transaction history is retrieved and how its 90-day cache is stored. Disabled does not request transactions. Memory only loses the cache when Home Assistant restarts. Encrypted persistent saves an encrypted cache in Home Assistant’s .storage directory. Home Assistant may still record summary sensor states and automation traces in either enabled mode."
           }
         }
       }
