@@ -16,6 +16,8 @@ from custom_components.open_banking.const import (
     CONF_REFRESHES_PER_DAY,
     CONF_SECRET_ID,
     CONF_SECRET_KEY,
+    CONF_TRANSACTION_STORAGE,
+    DEFAULT_TRANSACTION_STORAGE,
     DOMAIN,
 )
 from homeassistant.const import Platform
@@ -23,11 +25,12 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 
 
 async def test_setup_registers_callback_view(hass) -> None:
-    """Integration setup registers the authorization callback endpoint."""
+    """Integration setup registers its callback and transaction response action."""
     with patch("custom_components.open_banking.async_register_callback_view") as register:
         assert await async_setup(hass, {}) is True
 
     register.assert_called_once_with(hass)
+    assert hass.services.has_service(DOMAIN, "get_transactions")
 
 
 async def test_setup_entry_authenticates_refreshes_and_forwards_platforms(hass) -> None:
@@ -40,6 +43,7 @@ async def test_setup_entry_authenticates_refreshes_and_forwards_platforms(hass) 
     client.async_authenticate = AsyncMock()
     coordinator = MagicMock()
     coordinator.async_config_entry_first_refresh = AsyncMock()
+    coordinator.async_restore_transactions = AsyncMock()
     hass.config_entries.async_forward_entry_setups = AsyncMock()
 
     with (
@@ -51,7 +55,7 @@ async def test_setup_entry_authenticates_refreshes_and_forwards_platforms(hass) 
     client.async_authenticate.assert_awaited_once()
     coordinator.async_config_entry_first_refresh.assert_awaited_once()
     assert entry.runtime_data.coordinators == {"bank-1": coordinator}
-    hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(entry, [Platform.SENSOR])
+    hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(entry, [Platform.EVENT, Platform.SENSOR])
 
 
 async def test_setup_entry_restores_and_persists_subentry_snapshot(hass) -> None:
@@ -85,6 +89,7 @@ async def test_setup_entry_restores_and_persists_subentry_snapshot(hass) -> None
     client.async_authenticate = AsyncMock()
     coordinator = MagicMock()
     coordinator.async_config_entry_first_refresh = AsyncMock()
+    coordinator.async_restore_transactions = AsyncMock()
     hass.config_entries.async_forward_entry_setups = AsyncMock()
 
     with (
@@ -127,7 +132,7 @@ async def test_unload_entry_stops_coordinators_after_platform_unload(hass) -> No
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
 
     assert await async_unload_entry(hass, entry) is True
-    hass.config_entries.async_unload_platforms.assert_awaited_once_with(entry, [Platform.SENSOR])
+    hass.config_entries.async_unload_platforms.assert_awaited_once_with(entry, [Platform.EVENT, Platform.SENSOR])
     first.async_shutdown.assert_awaited_once()
     second.async_shutdown.assert_awaited_once()
 
@@ -168,7 +173,8 @@ async def test_migrate_legacy_refresh_interval_to_current_defaults(hass) -> None
     assert subentry.data[CONF_REFRESH_WINDOW_START] == "07:00:00"
     assert subentry.data[CONF_REFRESH_WINDOW_END] == "22:00:00"
     assert subentry.data["institution_id"] == "BANK"
-    assert entry.minor_version == 2
+    assert subentry.data[CONF_TRANSACTION_STORAGE] == DEFAULT_TRANSACTION_STORAGE
+    assert entry.minor_version == 3
 
 
 async def test_migration_preserves_current_schedule_and_is_idempotent(hass) -> None:
@@ -193,9 +199,11 @@ async def test_migration_preserves_current_schedule_and_is_idempotent(hass) -> N
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry) is True
-    assert dict(next(iter(entry.subentries.values())).data) == schedule
+    assert dict(next(iter(entry.subentries.values())).data) == schedule | {
+        CONF_TRANSACTION_STORAGE: DEFAULT_TRANSACTION_STORAGE
+    }
     assert await async_migrate_entry(hass, entry) is True
-    assert entry.minor_version == 2
+    assert entry.minor_version == 3
 
 
 async def test_migration_rejects_future_major_version(hass) -> None:

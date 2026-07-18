@@ -18,9 +18,12 @@ from custom_components.open_banking.const import (
     CONF_REFRESH_WINDOW_START,
     CONF_REFRESHES_PER_DAY,
     CONF_REQUISITION_ID,
+    CONF_TRANSACTION_STORAGE,
     DATA_CALLBACK_STATES,
     DOMAIN,
     SANDBOX_INSTITUTION_ID,
+    TRANSACTION_STORAGE_ENCRYPTED,
+    TRANSACTION_STORAGE_MEMORY,
 )
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
@@ -59,6 +62,21 @@ async def test_user_lists_institutions() -> None:
 
     assert result["step_id"] == "institution"
     assert flow._institutions[SANDBOX_INSTITUTION_ID] == "Sandbox Finance"  # noqa: SLF001
+    client.async_get_institutions.assert_awaited_once_with("GB")
+
+
+async def test_user_confirms_encrypted_transaction_storage_before_institution() -> None:
+    """New encrypted persistence requires an explicit warning confirmation."""
+    flow = OpenBankingInstitutionSubentryFlow()
+    client = MagicMock()
+    client.async_get_institutions = AsyncMock(return_value=[])
+    flow._client = MagicMock(return_value=client)  # type: ignore[method-assign]  # noqa: SLF001
+
+    warning = await flow.async_step_user(_preferences() | {CONF_TRANSACTION_STORAGE: TRANSACTION_STORAGE_ENCRYPTED})
+    result = await flow.async_step_transaction_storage_warning({})
+
+    assert warning["step_id"] == "transaction_storage_warning"
+    assert result["step_id"] == "institution"
     client.async_get_institutions.assert_awaited_once_with("GB")
 
 
@@ -210,6 +228,61 @@ async def test_reconfigure_updates_preferences_without_reconnecting() -> None:
     assert form["step_id"] == "reconfigure"
     flow.async_update_reload_and_abort.assert_called_once()
     assert flow.async_update_reload_and_abort.call_args.kwargs["data"][CONF_REQUISITION_ID] == "req-1"
+
+
+async def test_reconfigure_confirms_new_encrypted_storage() -> None:
+    """Newly enabled encrypted persistence displays the warning step."""
+    flow = OpenBankingInstitutionSubentryFlow()
+    subentry = MagicMock()
+    subentry.data = _preferences() | {
+        CONF_INSTITUTION_NAME: "Example Bank",
+        CONF_REQUISITION_ID: "req-1",
+        CONF_TRANSACTION_STORAGE: TRANSACTION_STORAGE_MEMORY,
+    }
+    flow._get_reconfigure_subentry = MagicMock(return_value=subentry)  # type: ignore[method-assign]  # noqa: SLF001
+    flow._get_entry = MagicMock(return_value=MagicMock())  # type: ignore[method-assign]  # noqa: SLF001
+    flow.async_update_reload_and_abort = MagicMock(return_value={"type": FlowResultType.ABORT})  # type: ignore[method-assign]
+
+    warning = await flow.async_step_reconfigure(
+        _preferences()
+        | {
+            CONF_RECONNECT: False,
+            CONF_TRANSACTION_STORAGE: TRANSACTION_STORAGE_ENCRYPTED,
+        }
+    )
+    await flow.async_step_transaction_storage_warning({})
+
+    assert warning["step_id"] == "transaction_storage_warning"
+    assert flow.async_update_reload_and_abort.call_args.kwargs["data"][CONF_TRANSACTION_STORAGE] == (
+        TRANSACTION_STORAGE_ENCRYPTED
+    )
+
+
+async def test_reconfigure_from_encrypted_to_memory_skips_warning() -> None:
+    """Moving away from encrypted persistence applies immediately."""
+    flow = OpenBankingInstitutionSubentryFlow()
+    subentry = MagicMock()
+    subentry.data = _preferences() | {
+        CONF_INSTITUTION_NAME: "Example Bank",
+        CONF_REQUISITION_ID: "req-1",
+        CONF_TRANSACTION_STORAGE: TRANSACTION_STORAGE_ENCRYPTED,
+    }
+    flow._get_reconfigure_subentry = MagicMock(return_value=subentry)  # type: ignore[method-assign]  # noqa: SLF001
+    flow._get_entry = MagicMock(return_value=MagicMock())  # type: ignore[method-assign]  # noqa: SLF001
+    flow.async_update_reload_and_abort = MagicMock(return_value={"type": FlowResultType.ABORT})  # type: ignore[method-assign]
+
+    result = await flow.async_step_reconfigure(
+        _preferences()
+        | {
+            CONF_RECONNECT: False,
+            CONF_TRANSACTION_STORAGE: TRANSACTION_STORAGE_MEMORY,
+        }
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert flow.async_update_reload_and_abort.call_args.kwargs["data"][CONF_TRANSACTION_STORAGE] == (
+        TRANSACTION_STORAGE_MEMORY
+    )
 
 
 async def test_reconfigure_rejects_invalid_window() -> None:

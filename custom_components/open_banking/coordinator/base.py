@@ -17,15 +17,20 @@ from custom_components.open_banking.const import (
     CONF_REFRESH_WINDOW_START,
     CONF_REFRESHES_PER_DAY,
     CONF_REQUISITION_ID,
+    CONF_TRANSACTION_STORAGE,
     DEFAULT_REFRESH_WINDOW_END,
     DEFAULT_REFRESH_WINDOW_START,
     DEFAULT_REFRESHES_PER_DAY,
+    DEFAULT_TRANSACTION_STORAGE,
     DOMAIN,
     LOGGER,
     MISSING_ENTITY_REFRESH_THRESHOLD,
     REQUISITION_EXPIRY_ISSUE_PREFIX,
     REQUISITION_EXPIRY_WARNING,
     REQUISITION_LINKED,
+    TRANSACTION_CACHE_FORMAT_VERSION,
+    TRANSACTION_STORAGE_DISABLED,
+    TRANSACTION_STORAGE_ENCRYPTED,
 )
 from custom_components.open_banking.data import OpenBankingConfigEntry
 from homeassistant.config_entries import ConfigSubentry
@@ -35,6 +40,9 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
+
+from .transaction_store import OpenBankingTransactionStore
+from .transactions import TransactionCache, TransactionChange, transaction_change, update_account_cache
 
 type SaveSnapshot = Callable[[dict[str, Any]], Awaitable[None]]
 
@@ -53,12 +61,20 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         subentry: ConfigSubentry,
         client: OpenBankingApiClient,
         save_snapshot: SaveSnapshot | None = None,
+        transaction_store: OpenBankingTransactionStore | None = None,
     ) -> None:
         """Initialize the coordinator."""
         self.subentry = subentry
         self.client = client
         self._open_banking_config_entry = config_entry
         self._save_snapshot = save_snapshot or _async_noop_save
+        self._transaction_store = transaction_store
+        self._transactions: TransactionCache = {}
+        self._transaction_changes: dict[str, TransactionChange] = {}
+        self._transaction_change_sequences: dict[str, int] = {}
+        self._transaction_last_error_category: str | None = None
+        self._transaction_last_error_at: datetime | None = None
+        self._transaction_blocked_until: datetime | None = None
         self._cancel_scheduled_refresh: CALLBACK_TYPE | None = None
         self._quota_limit: int | None = None
         self._quota_remaining: int | None = None
@@ -120,6 +136,32 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def expired_balances(self) -> set[tuple[str, str]]:
         """Return balances whose absence crossed the cleanup threshold."""
         return self._expired_balances.copy()
+
+    @property
+    def transaction_mode(self) -> str:
+        """Return the configured transaction storage mode."""
+        return str(self.subentry.data.get(CONF_TRANSACTION_STORAGE, DEFAULT_TRANSACTION_STORAGE))
+
+    @property
+    def transactions(self) -> TransactionCache:
+        """Return the in-memory transaction cache."""
+        return self._transactions
+
+    def transaction_change_for_account(self, account_id: str) -> tuple[int, TransactionChange] | None:
+        """Return the latest sanitized transaction change and its sequence."""
+        change = self._transaction_changes.get(account_id)
+        if change is None:
+            return None
+        return self._transaction_change_sequences.get(account_id, 0), change
+
+    async def async_restore_transactions(self) -> None:
+        """Restore or remove persistent transactions for this connection."""
+        if self._transaction_store is None:
+            return
+        if self.transaction_mode == TRANSACTION_STORAGE_ENCRYPTED:
+            self._transactions = await self._transaction_store.async_load(self.subentry.subentry_id)
+        else:
+            await self._transaction_store.async_delete(self.subentry.subentry_id)
 
     def async_restore_snapshot(self, snapshot: dict[str, Any] | None) -> None:
         """Restore saved coordinator and scheduling state."""
@@ -189,6 +231,10 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         "details": details_response.get("account", {}),
                         "balances": balances_response.get("balances", []),
                     }
+                    await self._async_update_transactions(
+                        account_id,
+                        str(details_response.get("account", {}).get("currency") or ""),
+                    )
         except OpenBankingAuthenticationError as err:
             await self._async_record_failure("authentication_failed")
             raise ConfigEntryAuthFailed(
@@ -232,7 +278,42 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             data["last_refresh_at"] = self._last_refresh_at.isoformat()
             data["next_refresh_at"] = self._next_refresh_at.isoformat() if self._next_refresh_at else None
             await self._save_snapshot(self._snapshot(data))
+            if self.transaction_mode == TRANSACTION_STORAGE_ENCRYPTED and self._transaction_store is not None:
+                await self._transaction_store.async_save(self.subentry.subentry_id, self._transactions)
             return data
+
+    async def _async_update_transactions(self, account_id: str, account_currency: str) -> None:
+        """Best-effort update one account's transaction cache."""
+        if self.transaction_mode == TRANSACTION_STORAGE_DISABLED:
+            self._transactions.clear()
+            self._transaction_changes.clear()
+            self._transaction_change_sequences.clear()
+            return
+        if self._transaction_blocked_until is not None and dt_util.utcnow() < self._transaction_blocked_until:
+            return
+        try:
+            payload = await self.client.async_get_account_transactions(account_id)
+        except OpenBankingAuthenticationError:
+            raise
+        except OpenBankingRateLimitError as err:
+            self._transaction_last_error_category = "rate_limited"
+            self._transaction_last_error_at = dt_util.utcnow()
+            if err.retry_after is not None:
+                self._transaction_blocked_until = dt_util.utcnow() + timedelta(seconds=err.retry_after)
+        except OpenBankingApiError:
+            self._transaction_last_error_category = "update_failed"
+            self._transaction_last_error_at = dt_util.utcnow()
+        else:
+            previous = self._transactions.get(account_id)
+            current = update_account_cache(payload, previous)
+            change = transaction_change(previous, current, account_currency)
+            self._transactions[account_id] = current
+            if change is not None:
+                self._transaction_changes[account_id] = change
+                self._transaction_change_sequences[account_id] = (
+                    self._transaction_change_sequences.get(account_id, 0) + 1
+                )
+            self._transaction_blocked_until = None
 
     async def _async_record_failure(self, category: str) -> None:
         """Persist a sanitized refresh failure without replacing cached data."""
@@ -388,7 +469,7 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         quotas = [
             quota
             for account_id in accounts
-            for scope in ("details", "balances")
+            for scope in ("details", "balances", "transactions")
             if (quota := rate_limits.get((account_id, scope))) is not None
         ]
         if not quotas:
@@ -441,6 +522,47 @@ class OpenBankingDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ),
             "missing_accounts": len(self._missing_accounts),
             "missing_balances": len(self._missing_balances),
+            "transactions": self._transaction_diagnostics(),
+        }
+
+    def _transaction_diagnostics(self) -> dict[str, Any]:
+        """Return aggregate transaction diagnostics without financial data."""
+        caches = list(self._transactions.values())
+        account_currencies = {
+            account_id: str(account.get("details", {}).get("currency") or "")
+            for account_id, account in ((self.data or {}).get("accounts", {})).items()
+        }
+        rate_limits = getattr(self.client, "account_rate_limits", {})
+        transaction_quotas = [
+            quota
+            for (account_id, scope), quota in rate_limits.items()
+            if scope == "transactions" and account_id in account_currencies
+        ]
+        updated_at = max(
+            (str(cache["updated_at"]) for cache in caches if cache.get("updated_at")),
+            default=None,
+        )
+        return {
+            "mode": self.transaction_mode,
+            "updated_at": updated_at,
+            "booked_count": sum(len(cache.get("booked", [])) for cache in caches),
+            "pending_count": sum(len(cache.get("pending", [])) for cache in caches),
+            "truncated": any(bool(cache.get("truncated")) for cache in caches),
+            "currency_mismatch_count": sum(
+                transaction.get("currency") != account_currencies.get(account_id)
+                for account_id, cache in self._transactions.items()
+                for status in ("booked", "pending")
+                for transaction in cache.get(status, [])
+            ),
+            "last_error_category": self._transaction_last_error_category,
+            "last_error_at": (self._transaction_last_error_at.isoformat() if self._transaction_last_error_at else None),
+            "encryption_format_version": (
+                TRANSACTION_CACHE_FORMAT_VERSION if self.transaction_mode == TRANSACTION_STORAGE_ENCRYPTED else None
+            ),
+            "quota_limit": min((quota.limit for quota in transaction_quotas), default=None),
+            "quota_remaining": min((quota.remaining for quota in transaction_quotas), default=None),
+            "quota_reset_after": max((quota.reset_after for quota in transaction_quotas), default=None),
+            "blocked_until": self._transaction_blocked_until.isoformat() if self._transaction_blocked_until else None,
         }
 
 

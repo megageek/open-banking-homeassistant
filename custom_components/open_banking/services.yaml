@@ -1,0 +1,46 @@
+get_transactions:
+  name: Get transactions
+  description: Return cached transactions for one Open Banking account without making an API request.
+  fields:
+    device_id:
+      name: Account
+      description: Open Banking account device whose cached transactions should be returned.
+      required: true
+      selector:
+        device:
+          integration: open_banking
+    date_from:
+      name: Start date
+      description: First transaction date to include. Defaults to 30 days ago.
+      selector:
+        date:
+    date_to:
+      name: End date
+      description: Last transaction date to include. Defaults to today.
+      selector:
+        date:
+    status:
+      name: Status
+      description: Return booked transactions, pending transactions, or both.
+      default: both
+      selector:
+        select:
+          options:
+            - booked
+            - pending
+            - both
+    limit:
+      name: Limit
+      description: Maximum number of transactions to return.
+      default: 100
+      selector:
+        number:
+          min: 1
+          max: 500
+          mode: box
+    include_raw:
+      name: Include raw bank data
+      description: Include the potentially large, cryptic, and sensitive original bank payload for each transaction.
+      default: false
+      selector:
+        boolean:

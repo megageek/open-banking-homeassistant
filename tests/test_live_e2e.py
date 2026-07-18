@@ -16,6 +16,7 @@ import pytest_socket
 
 from custom_components.open_banking.api import OpenBankingApiClient, OpenBankingCommunicationError
 from custom_components.open_banking.const import SANDBOX_INSTITUTION_ID
+from custom_components.open_banking.coordinator.transactions import update_account_cache
 
 pytestmark = pytest.mark.live_e2e
 
@@ -68,16 +69,17 @@ async def _wait_for_linked_requisition(
 async def _wait_for_account_data(
     client: OpenBankingApiClient,
     account_id: str,
-) -> tuple[dict[str, object], dict[str, object]]:
-    """Wait for Sandbox Finance account details and balances to become ready."""
+) -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
+    """Wait for Sandbox Finance account details, balances, and transactions."""
     for _attempt in range(15):
         try:
             details = await client.async_get_account_details(account_id)
             balances = await client.async_get_account_balances(account_id)
+            transactions = await client.async_get_account_transactions(account_id)
         except OpenBankingCommunicationError:
             await asyncio.sleep(1)
             continue
-        return details, balances
+        return details, balances, transactions
     pytest.fail("Sandbox account data did not become ready")
 
 
@@ -133,10 +135,18 @@ async def test_live_sandbox_full_authorization_journey() -> None:
 
             for account_id in accounts:
                 assert isinstance(account_id, str)
-                details, balances = await _wait_for_account_data(client, account_id)
+                details, balances, transactions = await _wait_for_account_data(client, account_id)
                 assert isinstance(details.get("account"), dict)
                 assert isinstance(balances.get("balances"), list)
-                for scope in ("details", "balances"):
+                assert isinstance(transactions.get("booked"), list)
+                assert isinstance(transactions.get("pending"), list)
+
+                cache = update_account_cache(transactions)
+                assert isinstance(cache.get("booked"), list)
+                assert isinstance(cache.get("pending"), list)
+                assert isinstance(cache.get("updated_at"), str)
+
+                for scope in ("details", "balances", "transactions"):
                     quota = client.account_rate_limits[(account_id, scope)]
                     assert quota.limit > 0
                     assert 0 <= quota.remaining < quota.limit

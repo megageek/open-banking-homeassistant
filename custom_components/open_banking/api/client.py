@@ -94,6 +94,17 @@ class OpenBankingApiClient:
         """Return account balances."""
         return await self._request("GET", f"/accounts/{account_id}/balances/")
 
+    async def async_get_account_transactions(self, account_id: str) -> dict[str, Any]:
+        """Return booked and pending account transactions."""
+        payload = await self._request("GET", f"/accounts/{account_id}/transactions/")
+        transactions = payload.get("transactions")
+        if not isinstance(transactions, dict):
+            raise OpenBankingInvalidResponseError("Transactions response did not contain a transactions object")
+        for status in ("booked", "pending"):
+            if not isinstance(transactions.get(status, []), list):
+                raise OpenBankingInvalidResponseError(f"Transactions {status} response was not a list")
+        return transactions
+
     async def _async_refresh_access_token(self) -> None:
         """Exchange the refresh token for an access token."""
         if self._refresh_token is None:

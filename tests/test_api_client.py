@@ -99,6 +99,40 @@ async def test_get_end_user_agreement() -> None:
     assert session.request.call_args.args[1].endswith("/agreements/enduser/agreement-1/")
 
 
+async def test_get_account_transactions_parses_booked_and_pending() -> None:
+    """Transaction responses expose both supported collections."""
+    client, session = client_with_responses(
+        FakeResponse(200, {"access": "access", "refresh": "refresh"}),
+        FakeResponse(200, {"transactions": {"booked": [{"transactionId": "1"}], "pending": []}}),
+    )
+    await client.async_authenticate()
+
+    transactions = await client.async_get_account_transactions("account")
+
+    assert transactions == {"booked": [{"transactionId": "1"}], "pending": []}
+    assert session.request.call_args.args[1].endswith("/accounts/account/transactions/")
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"transactions": []},
+        {"transactions": {"booked": {}, "pending": []}},
+    ],
+)
+async def test_get_account_transactions_rejects_malformed_payload(payload: object) -> None:
+    """Malformed transaction response shapes are rejected."""
+    client, _ = client_with_responses(
+        FakeResponse(200, {"access": "access", "refresh": "refresh"}),
+        FakeResponse(200, payload),
+    )
+    await client.async_authenticate()
+
+    with pytest.raises(OpenBankingInvalidResponseError):
+        await client.async_get_account_transactions("account")
+
+
 async def test_invalid_credentials_raise_authentication_error() -> None:
     """Credential rejection is distinguished from communication failures."""
     client, _ = client_with_responses(FakeResponse(401, {"detail": "bad credentials"}))

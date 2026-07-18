@@ -5,13 +5,19 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING, Any
 
-from custom_components.open_banking.const import CONF_BALANCE_TYPES, DEFAULT_BALANCE_TYPES, DOMAIN
+from custom_components.open_banking.const import (
+    CONF_BALANCE_TYPES,
+    DEFAULT_BALANCE_TYPES,
+    DOMAIN,
+    TRANSACTION_STORAGE_DISABLED,
+)
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .balance import OpenBankingBalanceSensor
 from .last_refresh import OpenBankingLastRefreshSensor
 from .next_refresh import OpenBankingNextRefreshSensor
 from .status import OpenBankingStatusSensor
+from .transaction_summary import TRANSACTION_SUMMARY_KINDS, OpenBankingTransactionSummarySensor
 
 if TYPE_CHECKING:
     from custom_components.open_banking.coordinator import OpenBankingDataUpdateCoordinator
@@ -48,6 +54,7 @@ def _async_setup_coordinator(
     institution_identifier = (DOMAIN, subentry_id)
     selected_types = coordinator.subentry.data.get(CONF_BALANCE_TYPES, DEFAULT_BALANCE_TYPES)
     known_entities: set[tuple[str, str]] = set()
+    known_transaction_entities: set[tuple[str, str]] = set()
 
     _async_cleanup_registry(entry, coordinator, set(selected_types))
 
@@ -64,6 +71,7 @@ def _async_setup_coordinator(
         names = {account_id: _account_base_name(account) for account_id, account in accounts.items()}
         duplicate_names = Counter(names.values())
         entities: list[OpenBankingBalanceSensor] = []
+        transaction_entities: list[OpenBankingTransactionSummarySensor] = []
         for account_id, account in accounts.items():
             available_types = {balance.get("balanceType") for balance in account.get("balances", [])}
             account_name = _account_name(
@@ -87,8 +95,26 @@ def _async_setup_coordinator(
                         institution_identifier,
                     )
                 )
+            if coordinator.transaction_mode != TRANSACTION_STORAGE_DISABLED:
+                for kind in TRANSACTION_SUMMARY_KINDS:
+                    entity_key = (account_id, kind)
+                    if entity_key in known_transaction_entities:
+                        continue
+                    known_transaction_entities.add(entity_key)
+                    transaction_entities.append(
+                        OpenBankingTransactionSummarySensor(
+                            coordinator,
+                            account_id,
+                            kind,
+                            account,
+                            account_name,
+                            institution_identifier,
+                        )
+                    )
         if entities:
             async_add_entities(entities, config_subentry_id=subentry_id)
+        if transaction_entities:
+            async_add_entities(transaction_entities, config_subentry_id=subentry_id)
 
     async_add_discovered_accounts()
     entry.async_on_unload(coordinator.async_add_listener(async_add_discovered_accounts))
@@ -139,6 +165,19 @@ def _async_cleanup_registry(
             None,
         )
         if balance_key is None:
+            transaction_key = next(
+                (
+                    (account_id, kind)
+                    for kind in TRANSACTION_SUMMARY_KINDS
+                    if entity_entry.unique_id == f"{account_id}-transaction-{kind}"
+                ),
+                None,
+            )
+            if transaction_key is not None and (
+                coordinator.transaction_mode == TRANSACTION_STORAGE_DISABLED or account_id in expired_accounts
+            ):
+                entity_registry.async_remove(entity_entry.entity_id)
+                removed = True
             continue
         if balance_key[1] not in selected_types or account_id in expired_accounts or balance_key in expired_balances:
             entity_registry.async_remove(entity_entry.entity_id)

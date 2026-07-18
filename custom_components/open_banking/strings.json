@@ -32,13 +32,15 @@
           "country": "Country",
           "refreshes_per_day": "Refreshes per day",
           "refresh_window_start": "Active window starts",
-          "refresh_window_end": "Active window ends"
+          "refresh_window_end": "Active window ends",
+          "transaction_storage": "Transaction storage"
         },
         "data_description": {
           "account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.",
           "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.",
           "country": "The country in which your bank account is held.",
-          "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance."
+          "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance.",
+          "transaction_storage": "Disabled makes no transaction requests. Memory only keeps a 90-day cache until restart. Encrypted persistent stores the cache in Home Assistant storage; summary states may still be recorded in all enabled modes."
         }
       },
       "institution": {
@@ -53,6 +55,10 @@
       },
       "finish": {
         "title": "Finishing bank connection"
+      },
+      "transaction_storage_warning": {
+        "title": "Store transaction history",
+        "description": "Sensitive transaction details will be encrypted and stored in Home Assistant’s local .storage directory. Encryption makes the cache alone difficult to read, but it does not protect against someone who obtains the complete Home Assistant configuration, which also contains the credential used to derive the encryption key."
       },
       "reauth_confirm": {
         "title": "Reconnect GoCardless",
@@ -98,13 +104,15 @@
             "country": "Country",
             "refreshes_per_day": "Refreshes per day",
             "refresh_window_start": "Active window starts",
-            "refresh_window_end": "Active window ends"
+            "refresh_window_end": "Active window ends",
+            "transaction_storage": "Transaction storage"
           },
           "data_description": {
             "account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.",
             "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.",
             "country": "The country in which your bank account is held.",
-            "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance."
+            "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance.",
+            "transaction_storage": "Disabled makes no transaction requests. Memory only keeps a 90-day cache until restart. Encrypted persistent stores the cache in Home Assistant storage; summary states may still be recorded in all enabled modes."
           }
         },
         "institution": {
@@ -120,6 +128,10 @@
         "finish": {
           "title": "Finishing bank connection"
         },
+        "transaction_storage_warning": {
+          "title": "Store transaction history",
+          "description": "Sensitive transaction details will be encrypted and stored in Home Assistant’s local .storage directory. Encryption makes the cache alone difficult to read, but it does not protect against someone who obtains the complete Home Assistant configuration."
+        },
         "reconfigure": {
           "title": "Update bank connection",
           "data": {
@@ -129,19 +141,33 @@
             "reconnect": "Reconnect bank authorization",
             "refreshes_per_day": "Refreshes per day",
             "refresh_window_start": "Active window starts",
-            "refresh_window_end": "Active window ends"
+            "refresh_window_end": "Active window ends",
+            "transaction_storage": "Transaction storage"
           },
           "data_description": {
             "account_holder": "A name used to identify this bank connection in Home Assistant, such as your name or ‘Joint account’. It does not need to match the legal account holder name.",
             "balance_types": "Creates sensors for the selected balance categories when your bank provides them. Leave all selected if you do not yet know which categories your bank supports.",
             "country": "The country in which your bank account is held.",
-            "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance."
+            "refreshes_per_day": "How many times to request new bank data during the active window. More frequent requests use more of the bank’s daily request allowance.",
+            "transaction_storage": "Disabled makes no transaction requests. Memory only keeps a 90-day cache until restart. Encrypted persistent stores the cache in Home Assistant storage; summary states may still be recorded in all enabled modes."
           }
         }
       }
     }
   },
   "entity": {
+    "event": {
+      "transaction_updates": {
+        "name": "Transaction updates",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "transactions_updated": "Transactions updated"
+            }
+          }
+        }
+      }
+    },
     "sensor": {
       "balance": {
         "name": "{balance_type} balance"
@@ -165,6 +191,41 @@
       },
       "next_refresh": {
         "name": "Next refresh"
+      },
+      "spending_today": {"name": "Spending today"},
+      "income_today": {"name": "Income today"},
+      "spending_this_month": {"name": "Spending this month"},
+      "income_this_month": {"name": "Income this month"},
+      "pending_outgoing": {"name": "Pending outgoing"},
+      "pending_outgoing_today": {"name": "Pending outgoing today"},
+      "pending_outgoing_this_month": {"name": "Pending outgoing this month"}
+    }
+  },
+  "triggers": {
+    "transactions_updated": {
+      "name": "Bank account transactions updated",
+      "description": "Triggers when cached transactions for a bank account change."
+    },
+    "new_booked_transactions": {
+      "name": "Bank account received new booked transactions",
+      "description": "Triggers when new booked transactions are observed for a bank account."
+    },
+    "pending_transactions_changed": {
+      "name": "Bank account pending transactions changed",
+      "description": "Triggers when pending transactions are added, updated, or removed."
+    }
+  },
+  "services": {
+    "get_transactions": {
+      "name": "Get transactions",
+      "description": "Return cached transactions for one Open Banking account.",
+      "fields": {
+        "device_id": {"name": "Account", "description": "Open Banking account device."},
+        "date_from": {"name": "Start date", "description": "First transaction date to include."},
+        "date_to": {"name": "End date", "description": "Last transaction date to include."},
+        "status": {"name": "Status", "description": "Booked, pending, or both."},
+        "limit": {"name": "Limit", "description": "Maximum transactions to return."},
+        "include_raw": {"name": "Include raw bank data", "description": "Include the large and sensitive original bank payload."}
       }
     }
   },
@@ -180,6 +241,27 @@
     },
     "update_failed": {
       "message": "Unable to update bank account data."
+    },
+    "transactions_disabled": {
+      "message": "Transaction support is disabled for this bank connection."
+    },
+    "transactions_unavailable": {
+      "message": "Transaction data is not available until the next successful refresh."
+    },
+    "invalid_transaction_range": {
+      "message": "The transaction date range is invalid."
+    },
+    "transaction_range_outside_retention": {
+      "message": "Transaction dates must be between {earliest} and {today}."
+    },
+    "transaction_device_missing": {
+      "message": "The selected account device does not exist."
+    },
+    "transaction_account_required": {
+      "message": "Select an Open Banking account device."
+    },
+    "transaction_account_unknown": {
+      "message": "The selected device is not an available bank account."
     }
   },
   "issues": {

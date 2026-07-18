@@ -1,0 +1,15 @@
+transactions_updated:
+  target:
+    entity:
+      domain: event
+      integration: open_banking
+new_booked_transactions:
+  target:
+    entity:
+      domain: event
+      integration: open_banking
+pending_transactions_changed:
+  target:
+    entity:
+      domain: event
+      integration: open_banking

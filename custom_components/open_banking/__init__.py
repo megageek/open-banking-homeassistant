@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
+from homeassistant.core import SupportsResponse
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -20,21 +22,26 @@ from .const import (
     CONF_REFRESHES_PER_DAY,
     CONF_SECRET_ID,
     CONF_SECRET_KEY,
+    CONF_TRANSACTION_STORAGE,
     DEFAULT_REFRESH_WINDOW_END,
     DEFAULT_REFRESH_WINDOW_START,
     DEFAULT_REFRESHES_PER_DAY,
+    DEFAULT_TRANSACTION_STORAGE,
     DOMAIN,
     REQUISITION_EXPIRY_ISSUE_PREFIX,
+    SERVICE_GET_TRANSACTIONS,
 )
 from .coordinator import OpenBankingDataUpdateCoordinator
+from .coordinator.transaction_store import OpenBankingTransactionStore
 from .data import OpenBankingData
+from .service_actions.get_transactions import GET_TRANSACTIONS_SCHEMA, async_get_transactions
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
     from .data import OpenBankingConfigEntry
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.EVENT, Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 STORAGE_VERSION = 1
 
@@ -42,6 +49,13 @@ STORAGE_VERSION = 1
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the integration and authorization callback."""
     async_register_callback_view(hass)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_TRANSACTIONS,
+        partial(async_get_transactions, hass),
+        schema=GET_TRANSACTIONS_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
     return True
 
 
@@ -61,6 +75,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: OpenBankingConfigEntry) 
     entry.runtime_data = OpenBankingData(client=client, coordinators=coordinators)
     store = Store[dict](hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
     snapshots = await store.async_load() or {}
+    transaction_store = OpenBankingTransactionStore(hass, entry.entry_id, str(entry.data[CONF_SECRET_KEY]))
+    await transaction_store.async_initialize()
+    await transaction_store.async_prune(set(entry.subentries))
     stale_subentry_ids = set(snapshots) - set(entry.subentries)
     if stale_subentry_ids:
         for subentry_id in stale_subentry_ids:
@@ -73,9 +90,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: OpenBankingConfigEntry) 
             snapshots[subentry_id] = snapshot
             await store.async_save(snapshots)
 
-        coordinator = OpenBankingDataUpdateCoordinator(hass, entry, subentry, client, async_save_snapshot)
+        coordinator = OpenBankingDataUpdateCoordinator(
+            hass,
+            entry,
+            subentry,
+            client,
+            async_save_snapshot,
+            transaction_store,
+        )
         coordinators[subentry.subentry_id] = coordinator
         coordinator.async_restore_snapshot(snapshots.get(subentry.subentry_id))
+        await coordinator.async_restore_transactions()
         await coordinator.async_config_entry_first_refresh()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -97,20 +122,21 @@ async def async_migrate_entry(hass: HomeAssistant, entry: OpenBankingConfigEntry
     """Migrate legacy bank-connection settings."""
     if entry.version != 1:
         return False
-    if entry.minor_version >= 2:
+    if entry.minor_version >= 3:
         return True
 
     for subentry in entry.subentries.values():
-        if CONF_REFRESH_INTERVAL not in subentry.data:
-            continue
         data = dict(subentry.data)
-        data.pop(CONF_REFRESH_INTERVAL, None)
-        data.setdefault(CONF_REFRESHES_PER_DAY, DEFAULT_REFRESHES_PER_DAY)
-        data.setdefault(CONF_REFRESH_WINDOW_START, DEFAULT_REFRESH_WINDOW_START)
-        data.setdefault(CONF_REFRESH_WINDOW_END, DEFAULT_REFRESH_WINDOW_END)
-        hass.config_entries.async_update_subentry(entry, subentry, data=data)
+        if entry.minor_version < 2:
+            data.pop(CONF_REFRESH_INTERVAL, None)
+            data.setdefault(CONF_REFRESHES_PER_DAY, DEFAULT_REFRESHES_PER_DAY)
+            data.setdefault(CONF_REFRESH_WINDOW_START, DEFAULT_REFRESH_WINDOW_START)
+            data.setdefault(CONF_REFRESH_WINDOW_END, DEFAULT_REFRESH_WINDOW_END)
+        data.setdefault(CONF_TRANSACTION_STORAGE, DEFAULT_TRANSACTION_STORAGE)
+        if data != subentry.data:
+            hass.config_entries.async_update_subentry(entry, subentry, data=data)
 
-    hass.config_entries.async_update_entry(entry, minor_version=2)
+    hass.config_entries.async_update_entry(entry, minor_version=3)
     return True
 
 

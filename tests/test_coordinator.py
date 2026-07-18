@@ -19,6 +19,9 @@ from custom_components.open_banking.const import (
     CONF_REFRESH_WINDOW_START,
     CONF_REFRESHES_PER_DAY,
     CONF_REQUISITION_ID,
+    CONF_TRANSACTION_STORAGE,
+    TRANSACTION_STORAGE_ENCRYPTED,
+    TRANSACTION_STORAGE_MEMORY,
 )
 from custom_components.open_banking.coordinator import OpenBankingDataUpdateCoordinator
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -66,6 +69,111 @@ async def test_coordinator_does_not_load_unlinked_accounts(hass) -> None:
     assert data["requisition"] == {"status": "UA", "accounts": ["account-1"]}
     assert data["accounts"] == {}
     client.async_get_account_details.assert_not_awaited()
+
+
+async def test_transaction_requests_follow_storage_mode(hass) -> None:
+    """Disabled mode skips transactions while enabled mode retrieves them."""
+    client = MagicMock()
+    client.async_get_requisition = AsyncMock(return_value={"status": "LN", "accounts": ["account-1"]})
+    client.async_get_account_details = AsyncMock(return_value={"account": {"currency": "GBP"}})
+    client.async_get_account_balances = AsyncMock(return_value={"balances": []})
+    client.async_get_account_transactions = AsyncMock(return_value={"booked": [], "pending": []})
+    coordinator = _coordinator(hass, client)
+
+    await coordinator._async_update_data()  # noqa: SLF001
+    client.async_get_account_transactions.assert_not_awaited()
+
+    coordinator.subentry.data[CONF_TRANSACTION_STORAGE] = TRANSACTION_STORAGE_MEMORY
+    await coordinator._async_update_data()  # noqa: SLF001
+    client.async_get_account_transactions.assert_awaited_once_with("account-1")
+    await coordinator.async_shutdown()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [OpenBankingCommunicationError("offline"), OpenBankingRateLimitError("wait", 30)],
+)
+async def test_transaction_only_failures_preserve_balances_and_cache(hass, error: Exception) -> None:
+    """Transaction failures do not discard successful balance data or prior cache."""
+    client = MagicMock()
+    client.async_get_requisition = AsyncMock(return_value={"status": "LN", "accounts": ["account-1"]})
+    client.async_get_account_details = AsyncMock(return_value={"account": {"currency": "GBP"}})
+    client.async_get_account_balances = AsyncMock(
+        return_value={"balances": [{"balanceType": "expected", "balanceAmount": {"amount": "10"}}]}
+    )
+    client.async_get_account_transactions = AsyncMock(side_effect=error)
+    coordinator = _coordinator(hass, client)
+    coordinator.subentry.data[CONF_TRANSACTION_STORAGE] = TRANSACTION_STORAGE_MEMORY
+    cached = {"booked": [{"id": "existing"}], "pending": [], "updated_at": "before", "truncated": False}
+    coordinator._transactions = {"account-1": cached}  # noqa: SLF001
+
+    data = await coordinator._async_update_data()  # noqa: SLF001
+
+    assert data["accounts"]["account-1"]["balances"][0]["balanceType"] == "expected"
+    assert coordinator.transactions["account-1"] is cached
+    await coordinator.async_shutdown()
+
+
+async def test_transaction_authentication_failure_triggers_reauthentication(hass) -> None:
+    """Authentication failures from transactions retain integration reauth behavior."""
+    client = MagicMock()
+    client.async_get_requisition = AsyncMock(return_value={"status": "LN", "accounts": ["account-1"]})
+    client.async_get_account_details = AsyncMock(return_value={"account": {"currency": "GBP"}})
+    client.async_get_account_balances = AsyncMock(return_value={"balances": []})
+    client.async_get_account_transactions = AsyncMock(side_effect=OpenBankingAuthenticationError("expired"))
+    coordinator = _coordinator(hass, client)
+    coordinator.subentry.data[CONF_TRANSACTION_STORAGE] = TRANSACTION_STORAGE_MEMORY
+
+    with pytest.raises(ConfigEntryAuthFailed):
+        await coordinator._async_update_data()  # noqa: SLF001
+
+
+def test_transaction_diagnostics_are_aggregate_and_sanitized(hass) -> None:
+    """Transaction diagnostics expose operational aggregates without financial data."""
+    client = MagicMock()
+    client.account_rate_limits = {
+        ("account-secret", "transactions"): SimpleNamespace(limit=10, remaining=7, reset_after=3600)
+    }
+    subentry = MagicMock(subentry_id="bank-1")
+    subentry.data = {
+        CONF_REQUISITION_ID: "req-1",
+        CONF_TRANSACTION_STORAGE: TRANSACTION_STORAGE_ENCRYPTED,
+    }
+    coordinator = OpenBankingDataUpdateCoordinator(hass, MagicMock(), subentry, client)
+    coordinator.async_set_updated_data(
+        {"accounts": {"account-secret": {"details": {"currency": "GBP"}, "balances": []}}}
+    )
+    coordinator._transactions = {  # noqa: SLF001
+        "account-secret": {
+            "booked": [{"id": "transaction-secret", "currency": "GBP", "amount": "-10", "description": "Private"}],
+            "pending": [{"id": "pending-secret", "currency": "EUR", "counterparty": "Private shop"}],
+            "updated_at": "2026-07-18T12:00:00+00:00",
+            "truncated": False,
+        }
+    }
+
+    diagnostics = coordinator.diagnostics()["transactions"]
+
+    assert diagnostics == {
+        "mode": TRANSACTION_STORAGE_ENCRYPTED,
+        "updated_at": "2026-07-18T12:00:00+00:00",
+        "booked_count": 1,
+        "pending_count": 1,
+        "truncated": False,
+        "currency_mismatch_count": 1,
+        "last_error_category": None,
+        "last_error_at": None,
+        "encryption_format_version": 1,
+        "quota_limit": 10,
+        "quota_remaining": 7,
+        "quota_reset_after": 3600,
+        "blocked_until": None,
+    }
+    serialized = str(diagnostics)
+    assert "account-secret" not in serialized
+    assert "transaction-secret" not in serialized
+    assert "Private" not in serialized
+    assert "-10" not in serialized
 
 
 async def test_coordinator_tracks_agreement_expiry_and_creates_warning(hass) -> None:

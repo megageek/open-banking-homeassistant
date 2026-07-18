@@ -17,9 +17,11 @@ from custom_components.open_banking.const import (
     CONF_REQUISITION_ID,
     CONF_SECRET_ID,
     CONF_SECRET_KEY,
+    CONF_TRANSACTION_STORAGE,
     DOMAIN,
     SANDBOX_INSTITUTION_ID,
     SUBENTRY_TYPE_INSTITUTION,
+    TRANSACTION_STORAGE_ENCRYPTED,
 )
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.helpers.network import NoURLAvailableError
@@ -93,6 +95,28 @@ async def test_connection_collects_preferences_and_lists_institutions() -> None:
     assert result["type"] is data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "institution"
     assert flow._institutions[SANDBOX_INSTITUTION_ID] == "Sandbox Finance"  # noqa: SLF001
+    client.async_get_institutions.assert_awaited_once_with("GB")
+
+
+async def test_first_connection_confirms_encrypted_transaction_storage() -> None:
+    """The parent flow requires confirmation before persisting transactions."""
+    flow = OpenBankingConfigFlow()
+    flow._data = {CONF_SECRET_ID: "id", CONF_SECRET_KEY: "key"}  # noqa: SLF001
+    client = MagicMock()
+    client.async_get_institutions = AsyncMock(return_value=[])
+    flow._initial_client = MagicMock(return_value=client)  # type: ignore[method-assign]  # noqa: SLF001
+
+    warning = await flow.async_step_connection(
+        {
+            CONF_COUNTRY: "GB",
+            CONF_ACCOUNT_HOLDER: "Alex",
+            CONF_TRANSACTION_STORAGE: TRANSACTION_STORAGE_ENCRYPTED,
+        }
+    )
+    result = await flow.async_step_transaction_storage_warning({})
+
+    assert warning["step_id"] == "transaction_storage_warning"
+    assert result["step_id"] == "institution"
     client.async_get_institutions.assert_awaited_once_with("GB")
 
 
