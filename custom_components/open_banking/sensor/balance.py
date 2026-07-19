@@ -16,7 +16,7 @@ class OpenBankingBalanceSensor(OpenBankingEntity, SensorEntity):
     """Represent one balance type for a bank account."""
 
     _attr_device_class = SensorDeviceClass.MONETARY
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_state_class = SensorStateClass.TOTAL
 
     def __init__(
         self,

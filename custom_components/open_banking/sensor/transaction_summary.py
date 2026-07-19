@@ -30,7 +30,7 @@ class OpenBankingTransactionSummarySensor(OpenBankingEntity, SensorEntity):
     """Represent a derived account transaction total."""
 
     _attr_device_class = SensorDeviceClass.MONETARY
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_state_class = SensorStateClass.TOTAL
 
     def __init__(
         self,
