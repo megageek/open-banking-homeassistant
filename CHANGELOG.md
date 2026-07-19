@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.3](https://github.com/megageek/open-banking-homeassistant/compare/v0.6.2...v0.6.3) (2026-07-19)
+
+
+### Bug Fixes
+
+* **sensor:** use valid monetary state class ([13703e5](https://github.com/megageek/open-banking-homeassistant/commit/13703e50909246a1ee1199e4e7765d9c300e9565))
+
 ## [0.6.2](https://github.com/megageek/open-banking-homeassistant/compare/v0.6.1...v0.6.2) (2026-07-18)
 
 
