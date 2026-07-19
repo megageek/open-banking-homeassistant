@@ -32,7 +32,9 @@ been exhausted.
 The `open_banking.get_transactions` action returns normalized cached
 transactions without making a new bank API request. Select an account device;
 the default response contains up to 100 booked and pending transactions from the
-last 30 days.
+previous 30 local calendar days, ordered newest first. Optional `date_from` and
+`date_to` filters must remain within the retained 90-day window, and `limit`
+accepts values from 1 to 500.
 
 ```yaml
 action: open_banking.get_transactions
@@ -42,6 +44,12 @@ data:
   limit: 50
 response_variable: recent_transactions
 ```
+
+Each normalized transaction contains its normalized ID, booked or pending
+status, booking and value dates when supplied, amount, currency, counterparty,
+and description. The top-level response identifies the selected account device,
+display name, currency, cache timestamp, requested range, and whether the result
+was truncated.
 
 Set `include_raw: true` only when the normalized fields are insufficient. Raw
 bank objects vary between institutions, may be large and cryptic, contain

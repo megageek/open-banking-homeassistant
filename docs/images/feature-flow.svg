@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="330" viewBox="0 0 1200 330" role="img" aria-labelledby="title description">
+  <title id="title">Open Banking integration feature flow</title>
+  <description id="description">Connected banks provide balances and optional transactions to Home Assistant, producing entities, cached actions, and sanitized automation triggers.</description>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef9fc"/>
+      <stop offset="1" stop-color="#f5f2ff"/>
+    </linearGradient>
+    <linearGradient id="hub" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#18bcf2"/>
+      <stop offset="1" stop-color="#6554c0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#17324d" flood-opacity=".14"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7792a8"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="330" rx="26" fill="url(#background)"/>
+
+  <g font-family="Inter,Segoe UI,Arial,sans-serif" text-anchor="middle">
+    <g filter="url(#shadow)">
+      <rect x="45" y="95" width="220" height="140" rx="20" fill="#ffffff"/>
+      <rect x="395" y="65" width="270" height="200" rx="24" fill="url(#hub)"/>
+      <rect x="795" y="30" width="350" height="70" rx="18" fill="#ffffff"/>
+      <rect x="795" y="130" width="350" height="70" rx="18" fill="#ffffff"/>
+      <rect x="795" y="230" width="350" height="70" rx="18" fill="#ffffff"/>
+    </g>
+
+    <g fill="none" stroke="#7792a8" stroke-width="4" marker-end="url(#arrow)">
+      <path d="M265 165 H380"/>
+      <path d="M665 125 C720 125 730 65 780 65"/>
+      <path d="M665 165 H780"/>
+      <path d="M665 205 C720 205 730 265 780 265"/>
+    </g>
+
+    <g fill="#183247">
+      <path d="M103 143h104v13H103zm10-9 42-25 42 25zm3 30h15v35h-15zm31 0h16v35h-16zm32 0h15v35h-15zm-70 43h92v13h-92z" fill="#18a6d5"/>
+      <text x="155" y="82" font-size="16" font-weight="600" fill="#547086">SECURE API ACCESS</text>
+      <text x="155" y="258" font-size="22" font-weight="700">Connected banks</text>
+
+      <text x="530" y="125" font-size="28" font-weight="750" fill="#ffffff">Open Banking</text>
+      <text x="530" y="158" font-size="19" font-weight="600" fill="#eafaff">via GoCardless</text>
+      <path d="M493 187h74a10 10 0 0 1 10 10v20a10 10 0 0 1-10 10h-74a10 10 0 0 1-10-10v-20a10 10 0 0 1 10-10z" fill="#ffffff" opacity=".18"/>
+      <path d="M512 187v-8a18 18 0 0 1 36 0v8" fill="none" stroke="#ffffff" stroke-width="6"/>
+      <circle cx="530" cy="205" r="5" fill="#ffffff"/>
+
+      <circle cx="832" cy="65" r="20" fill="#e5f8fd"/>
+      <path d="M821 65h22m-11-11v22" stroke="#159ac7" stroke-width="5" stroke-linecap="round"/>
+      <text x="981" y="59" font-size="21" font-weight="700">Balance &amp; summary sensors</text>
+      <text x="981" y="82" font-size="15" fill="#61788b">Native currency • local calendar periods</text>
+
+      <circle cx="832" cy="165" r="20" fill="#eeeafd"/>
+      <path d="M821 154h22v22h-22z M826 160h12 M826 166h12 M826 172h8" fill="none" stroke="#6554c0" stroke-width="3" stroke-linecap="round"/>
+      <text x="981" y="159" font-size="21" font-weight="700">Cached transaction action</text>
+      <text x="981" y="182" font-size="15" fill="#61788b">Normalized by default • raw is opt-in</text>
+
+      <circle cx="832" cy="265" r="20" fill="#e8f7f1"/>
+      <path d="M820 268c8-15 16-15 24 0M824 273h16" fill="none" stroke="#24976f" stroke-width="4" stroke-linecap="round"/>
+      <text x="981" y="259" font-size="21" font-weight="700">Automation triggers</text>
+      <text x="981" y="282" font-size="15" fill="#61788b">Sanitized counts • no financial details</text>
+    </g>
+  </g>
+</svg>
