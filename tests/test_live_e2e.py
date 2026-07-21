@@ -7,16 +7,19 @@ from datetime import UTC, datetime, timedelta
 import os
 from pathlib import Path
 import re
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from aiohttp import ClientSession
-from playwright.async_api import Page, async_playwright
 import pytest
 import pytest_socket
 
 from custom_components.open_banking.api import OpenBankingApiClient, OpenBankingCommunicationError
 from custom_components.open_banking.const import SANDBOX_INSTITUTION_ID
 from custom_components.open_banking.coordinator.transactions import update_account_cache
+
+if TYPE_CHECKING:
+    from playwright.async_api import Page
 
 pytestmark = pytest.mark.live_e2e
 
@@ -85,6 +88,8 @@ async def _wait_for_account_data(
 
 async def test_live_sandbox_full_authorization_journey() -> None:
     """Link Sandbox Finance in a browser and retrieve its account data."""
+    from playwright.async_api import async_playwright  # noqa: PLC0415 - optional E2E dependency
+
     secret_id = _require_secret("OPEN_BANKING_SECRET_ID")
     secret_key = _require_secret("OPEN_BANKING_SECRET_KEY")
     pytest_socket.enable_socket()

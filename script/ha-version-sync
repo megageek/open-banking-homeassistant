@@ -2,9 +2,10 @@
 
 # script/ha-version-sync: Validate HA release-train consistency across all version sources
 #
-# Checks that pytest-homeassistant-custom-component (requirements_test.txt),
-# the homeassistant minimum in hacs.json, and HA_VERSION in .devcontainer/.env
-# (when explicitly set) all target the same Home Assistant release train (YYYY.M).
+# Checks that pytest-homeassistant-custom-component (requirements_test.txt and
+# the pyproject.toml test extra), the homeassistant minimum in hacs.json, and
+# HA_VERSION in .devcontainer/.env (when explicitly set) all target the same
+# Home Assistant release train (YYYY.M).
 # Also ensures CI workflows do not hardcode HA_VERSION pins, which could drift from
 # the canonical sources above.
 #
@@ -31,6 +32,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import tomllib
 import urllib.request
 from pathlib import Path
 
@@ -67,6 +69,24 @@ m = re.search(r"^pytest-homeassistant-custom-component==([^\s#]+)", req_text, re
 if not m:
     fail("pytest-homeassistant-custom-component pin not found in requirements_test.txt")
 pkg_version = m.group(1)
+
+project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+test_dependencies = project.get("project", {}).get("optional-dependencies", {}).get("test", [])
+pyproject_pin = next(
+    (
+        dependency.split("==", 1)[1]
+        for dependency in test_dependencies
+        if dependency.startswith("pytest-homeassistant-custom-component==")
+    ),
+    None,
+)
+if pyproject_pin is None:
+    fail("pytest-homeassistant-custom-component pin not found in pyproject.toml test extra")
+if pyproject_pin != pkg_version:
+    fail(
+        "pytest-homeassistant-custom-component pin mismatch: "
+        f"requirements_test.txt has {pkg_version}, pyproject.toml has {pyproject_pin}"
+    )
 
 with urllib.request.urlopen(
     f"https://pypi.org/pypi/pytest-homeassistant-custom-component/{pkg_version}/json",
@@ -124,7 +144,7 @@ if len(unique_trains) > 1:
     lines = "\n".join(f"  {name}: {ver} (train {t})" for name, (ver, t) in sources.items())
     print(
         f"HA version sync FAILED — release train mismatch:\n{lines}\n\n"
-        "Update hacs.json, requirements_test.txt, and .devcontainer/.env together. "
+        "Update hacs.json, requirements_test.txt, pyproject.toml, and .devcontainer/.env together. "
         "If CI workflows were edited, avoid hardcoded HA_VERSION values there.",
         file=sys.stderr,
     )

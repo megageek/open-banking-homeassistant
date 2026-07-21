@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
+# Live credentials are stored in the project environment overrides.
+# shellcheck source=.devcontainer/_load_env.sh
+source "$PWD/.devcontainer/_load_env.sh"
+
+exec "$SCRIPT_DIR/test" -m live_api "$@"

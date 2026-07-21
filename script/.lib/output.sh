@@ -89,11 +89,13 @@ require_command() {
 }
 
 # Activate the Home Assistant virtual environment if not already active.
-# Silently skips when VIRTUAL_ENV is already set (e.g. in CI or nested calls).
+# Only trust VIRTUAL_ENV when its interpreter is also first on PATH; agent
+# shells can inherit the variable without inheriting the matching PATH.
 activate_venv() {
-    if [[ -n ${VIRTUAL_ENV:-} ]]; then
+    if [[ -n ${VIRTUAL_ENV:-} && $(command -v python 2>/dev/null) == "$VIRTUAL_ENV/bin/python" ]]; then
         return 0
     fi
+    unset VIRTUAL_ENV
     log_header "Activating virtual environment"
     # shellcheck source=/dev/null
     if [[ -f "$HOME/ha-venv/bin/activate" ]]; then
