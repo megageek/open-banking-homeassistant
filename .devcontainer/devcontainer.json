@@ -1,6 +1,9 @@
 {
   "name": "HA ${localWorkspaceFolderBasename} Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:debian",
+  // Bubblewrap (used by Codex's patch helper) creates an unprivileged user namespace.
+  // Docker's default seccomp profile blocks that operation inside this container.
+  "runArgs": ["--security-opt=seccomp=unconfined"],
   // Lifecycle hooks — execution order on first creation:
   //   onCreateCommand → updateContentCommand → postCreateCommand → postStartCommand → postAttachCommand
   // On subsequent starts (container stopped/restarted):

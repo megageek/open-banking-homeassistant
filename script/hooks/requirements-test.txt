@@ -1,0 +1,2 @@
+# Integration-specific test dependencies not provided by the blueprint.
+playwright==1.61.0
