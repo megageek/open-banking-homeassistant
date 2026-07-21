@@ -10,6 +10,12 @@ name = "open-banking-homeassistant"
 version = "0.0.0"              # Version is managed in manifest.json only
 requires-python = ">=3.14"
 
+[project.optional-dependencies]
+test = [
+    "playwright==1.61.0",
+    "pytest-homeassistant-custom-component==0.13.325",
+]
+
 [tool.setuptools]
 packages = ["custom_components.open_banking"]
 
@@ -41,7 +47,7 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 asyncio_debug = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "-ra -q --strict-markers"
+addopts = "-ra -q --strict-markers -m 'not live_api and not live_e2e'"
 markers = [
     "unit: Unit tests (fast, no external dependencies)",
     "integration: Integration tests (may use coordinator/time service)",

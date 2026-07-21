@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 set -euo pipefail
 
@@ -8,5 +8,17 @@ cd "$SCRIPT_DIR/.."
 # Live credentials are stored in the project environment overrides.
 # shellcheck source=.devcontainer/_load_env.sh
 source "$PWD/.devcontainer/_load_env.sh"
+
+# shellcheck source=script/.lib/output.sh
+source "$SCRIPT_DIR/.lib/output.sh"
+activate_venv
+
+if ! python -c "import playwright" >/dev/null 2>&1; then
+    log_info "Installing the declared E2E test dependencies..."
+    uv pip install --requirement pyproject.toml --extra test
+fi
+
+log_info "Ensuring Playwright Chromium and its system dependencies are installed..."
+python -m playwright install --with-deps chromium
 
 exec "$SCRIPT_DIR/test" -m live_e2e "$@"

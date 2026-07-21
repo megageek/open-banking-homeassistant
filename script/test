@@ -54,12 +54,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-run_hook "test" "pre"
-
-# Check if pytest is available
-if ! python -c "import pytest" 2>/dev/null; then
-    log_info "pytest not found. Installing test dependencies..."
-    uv pip install -e ".[test]"
+# Check if the complete declared test environment is available.
+if ! python -c "import pytest, pytest_homeassistant_custom_component" 2>/dev/null; then
+    log_info "Test dependencies not found. Installing..."
+    uv pip install --requirement pyproject.toml --extra test
 fi
 
 # Run pytest with project configuration
@@ -70,6 +68,8 @@ else
 fi
 echo ""
 
+run_hook "test" "pre"
+echo ""
 pytest "${COVERAGE_ARGS[@]}" "${PYTEST_ARGS[@]}"
 
 run_hook "test" "post"
