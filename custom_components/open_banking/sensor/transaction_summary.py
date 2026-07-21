@@ -11,6 +11,7 @@ from custom_components.open_banking.coordinator import OpenBankingDataUpdateCoor
 from custom_components.open_banking.coordinator.transactions import transaction_amount, transaction_date
 from custom_components.open_banking.entity import OpenBankingEntity
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.event import async_track_point_in_time
 from homeassistant.util import dt as dt_util
@@ -115,6 +116,7 @@ class OpenBankingTransactionSummarySensor(OpenBankingEntity, SensorEntity):
     def _schedule_midnight(self) -> None:
         next_midnight = dt_util.start_of_local_day(dt_util.now() + timedelta(days=1))
 
+        @callback
         def async_midnight(_: Any) -> None:
             self.async_write_ha_state()
             self._schedule_midnight()
