@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.4](https://github.com/megageek/open-banking-homeassistant/compare/v0.6.3...v0.6.4) (2026-07-21)
+
+
+### Bug Fixes
+
+* **sensor:** run midnight summary update on event loop ([ab1584c](https://github.com/megageek/open-banking-homeassistant/commit/ab1584c98ad0845baaaa9f02bac6811cc1c70900))
+* **sensor:** run midnight summary update on event loop ([82cd8fe](https://github.com/megageek/open-banking-homeassistant/commit/82cd8fe5a45eea6927cccf8d057c33630910a9cf))
+
 ## [0.6.3](https://github.com/megageek/open-banking-homeassistant/compare/v0.6.2...v0.6.3) (2026-07-19)
 
 
