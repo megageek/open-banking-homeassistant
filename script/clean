@@ -21,8 +21,20 @@ cd "$SCRIPT_DIR/.."
 # shellcheck source=script/.lib/output.sh
 source "$SCRIPT_DIR/.lib/output.sh"
 
-activate_venv
-PYTHON="$VIRTUAL_ENV/bin/python"
+if [[ -z ${VIRTUAL_ENV:-} ]]; then
+    log_header "Activating virtual environment"
+    # shellcheck source=/dev/null
+    if [[ -f "$HOME/ha-venv/bin/activate" ]]; then
+        source "$HOME/ha-venv/bin/activate"
+    elif [[ -f "$PWD/.local/ha-venv/bin/activate" ]]; then
+        source "$PWD/.local/ha-venv/bin/activate"
+    elif [[ -f "$HOME/.local/ha-venv/bin/activate" ]]; then
+        source "$HOME/.local/ha-venv/bin/activate"
+    else
+        log_error "Virtual environment not found. Run: script/setup/bootstrap"
+        exit 1
+    fi
+fi
 
 MINIMAL_MODE=false
 DEEP_MODE=false
@@ -48,30 +60,16 @@ if compgen -G "*.egg-info" >/dev/null; then
 fi
 
 # Uninstall if accidentally installed (always, even in minimal mode)
-PROJECT_NAME=$("$PYTHON" -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("pyproject.toml").read_text())["project"]["name"])')
-if "$PYTHON" -m pip show "$PROJECT_NAME" >/dev/null 2>&1; then
-    if [[ $MINIMAL_MODE == false ]]; then
-        log_step "Uninstalling accidentally installed project package: $PROJECT_NAME"
-    fi
-    if ! "$PYTHON" -m pip uninstall -y "$PROJECT_NAME"; then
-        log_error "Failed to uninstall project package: $PROJECT_NAME"
-        exit 1
-    fi
-fi
-
 # Find all non-symlink directories in custom_components/
 if [[ -d custom_components ]]; then
     while IFS= read -r -d '' dir; do
         if [[ -d "$dir" && ! -L "${dir%/}" ]]; then
             PACKAGE_NAME=$(basename "$dir")
-            if "$PYTHON" -m pip show "$PACKAGE_NAME" >/dev/null 2>&1; then
+            if pip show "$PACKAGE_NAME" >/dev/null 2>&1; then
                 if [[ $MINIMAL_MODE == false ]]; then
                     log_step "Uninstalling accidentally installed package: $PACKAGE_NAME"
                 fi
-                if ! "$PYTHON" -m pip uninstall -y "$PACKAGE_NAME"; then
-                    log_error "Failed to uninstall package: $PACKAGE_NAME"
-                    exit 1
-                fi
+                pip uninstall -y "$PACKAGE_NAME" >/dev/null 2>&1 || true
             fi
         fi
     done < <(find custom_components -mindepth 1 -maxdepth 1 -type d -print0)
