@@ -46,16 +46,6 @@ HA_CORE_REPO="https://github.com/home-assistant/core.git"
 export GIT_HTTP_LOW_SPEED_LIMIT=1024
 export GIT_HTTP_LOW_SPEED_TIME=30
 
-# Home Assistant is installed in the project virtual environment. An unrelated
-# virtual environment may already be active (for example, in an agent shell), so
-# only preserve it when it contains Home Assistant.
-if python3 -c "import homeassistant" >/dev/null 2>&1; then
-    activate_venv
-else
-    VIRTUAL_ENV=""
-    activate_venv
-fi
-
 # _git_fetch_tag TAG
 # Fetches a single HA Core tag with up to 3 attempts and exponential back-off.
 _git_fetch_tag() {
@@ -161,6 +151,8 @@ else
         log_info "Using cached version $CURRENT_VERSION"
     fi
 fi
+
+activate_venv
 
 # Check if we have required dependencies
 log_info "Checking dependencies..."
