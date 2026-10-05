@@ -16,5 +16,4 @@
 
 # Testing utilities for Home Assistant custom components
 # Provides additional fixtures and utilities specifically for custom component testing
-pytest-homeassistant-custom-component==0.13.325
-playwright==1.61.0
+pytest-homeassistant-custom-component==0.13.354
