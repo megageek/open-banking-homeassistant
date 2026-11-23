@@ -30,11 +30,13 @@ for dir in /workspaces/* /workspace; do
     fi
 done
 
-# Export project environment overrides for this shell and its child processes.
+# DevContainer environment overrides (.env, then .env.local, which wins); set -a exports them to hass, pytest and uv.
 if [ -n "$WORKSPACE_ROOT" ]; then
     set -a
-    [ -f "$WORKSPACE_ROOT/.devcontainer/.env" ] && source "$WORKSPACE_ROOT/.devcontainer/.env"
-    [ -f "$WORKSPACE_ROOT/.devcontainer/.env.local" ] && source "$WORKSPACE_ROOT/.devcontainer/.env.local"
+    # shellcheck source=/dev/null
+    [ -f "$WORKSPACE_ROOT/.devcontainer/.env" ] && . "$WORKSPACE_ROOT/.devcontainer/.env"
+    # shellcheck source=/dev/null
+    [ -f "$WORKSPACE_ROOT/.devcontainer/.env.local" ] && . "$WORKSPACE_ROOT/.devcontainer/.env.local"
     set +a
 fi
 
@@ -52,11 +54,21 @@ if [ -n "$WORKSPACE_ROOT" ]; then
     alias ha-clean="$WORKSPACE_ROOT/script/clean"
     alias ha-type-check="$WORKSPACE_ROOT/script/type-check"
     alias ha-help="$WORKSPACE_ROOT/script/help"
+    alias ha-env="$WORKSPACE_ROOT/script/ha-env"
 
     # Shorthand for common tasks
     alias ha-t="$WORKSPACE_ROOT/script/test"
     alias ha-l="$WORKSPACE_ROOT/script/lint"
     alias ha-d="$WORKSPACE_ROOT/script/develop"
+    alias ha-e="$WORKSPACE_ROOT/script/ha-env"
+
+    # shellcheck source=/dev/null
+    [ -f "$WORKSPACE_ROOT/script/.lib/ha_env_shell.sh" ] && . "$WORKSPACE_ROOT/script/.lib/ha_env_shell.sh"
+
+    # Copilot CLI wrapper (project-managed defaults).
+    if command -v copilot-safe >/dev/null 2>&1; then
+        alias copilot='copilot-safe'
+    fi
 fi
 
 # Change to workspace directory if we're in /home/vscode
